@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Network Animation - AD, DNS, DFS, MDM, Cross-Forest, PKI, LDAP Flows</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Theme Colors */
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --header-bg: rgba(255, 255, 255, 0.1);
+            --canvas-bg: rgba(255, 255, 255, 0.05);
+            --canvas-border: rgba(255, 255, 255, 0.1);
+            --text-light: #fff;
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --active-red: #ff6b6b;
+            --active-orange: #ee5a24;
+            --stopped-status: #e74c3c;
+            --ready-status: #4CAF50;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+
+            /* Device Colors */
+            --color-client: #badc58; /* Green-yellow */
+            --color-dc: #ff6b6b; /* Red */
+            --color-dns: #4ecdc4; /* Teal */
+            --color-file-server: #feca57; /* Gold */
+            --color-mobile: #9b59b6; /* Amethyst */
+            --color-mdm-cloud: #7ed6df; /* Light Blue */
+            --color-public-dns: #f9ca24; /* Gold-yellow */
+            --color-site-link: #3498db; /* Blue */
+            --color-ca-server: #c0392b; /* Dark Red for CA */
+            --color-trusted-dc: #8e44ad; /* Dark Purple for Trusted DC */
+
+
+            /* Protocol Colors */
+            --proto-dns-query: #feca57;
+            --proto-dns-reply: #feca57;
+            --proto-srv-query: #f8c291;
+            --proto-srv-reply: #f8c291;
+            --proto-ldap: #ff6b6b;
+            --proto-ad-replication: #ff9ff3;
+            --proto-smb: #a29bfe;
+            --proto-dfs-referral: #81ecec;
+            --proto-mdm-enroll: #54a0ff;
+            --proto-mdm-profile: #54a0ff;
+            --proto-mdm-check: #00d2d3;
+            --proto-generic-request: #fd79a8;
+            --proto-generic-response: #00b894;
+            --proto-kerberos-referral: #ff7675; /* New */
+            --proto-service-ticket: #48dbfb; /* New */
+            --proto-cert-req: #e67e22; /* New */
+            --proto-cert-issue: #27ae60; /* New */
+            --proto-ocsp-crl: #f1c40f; /* New */
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars due to animations */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1700px; /* Wider to accommodate sidebars + canvas */
+            margin: 20px auto;
+            padding: 0 20px; /* Adjust padding for sidebars */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: var(--header-bg);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, var(--active-red) 0%, var(--active-orange) 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn.active:hover {
+            box-shadow: 0 12px 30px rgba(255, 107, 107, 0.8);
+        }
+
+        /* Main Content Area (canvas and sidebars) */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+            position: relative; /* For proper positioning of sticky sidebars */
+        }
+
+        /* Sidebars */
+        .left-sidebar, .right-sidebar {
+            width: 250px;
+            min-width: 250px; /* Fixed width for sidebars */
+            max-height: calc(100vh - 40px); /* Limit height to viewport, considering body padding */
+            overflow-y: auto; /* Scroll if content overflows */
+            background: var(--sidebar-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: sticky; /* Sticky positioning within .main-content */
+            top: 20px; /* Distance from top of viewport */
+        }
+
+        .left-sidebar {
+            order: 1; /* Left side */
+        }
+
+        .right-sidebar {
+            order: 3; /* Right side */
+        }
+
+        /* Legend within Left Sidebar */
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column initially */
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Stats within Right Sidebar */
+        .stats h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .stats div:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .status-text {
+            color: var(--ready-status);
+            font-weight: bold;
+        }
+        .protocol-badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: flex-end; /* Align badges to the right */
+        }
+        .protocol-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+
+        /* Network Canvas */
+        .network-canvas {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            height: 800px; /* Adjusted height for this training sim */
+            background: var(--canvas-bg);
+            border: 2px solid var(--canvas-border);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            order: 2; /* Middle position */
+        }
+
+        /* Swimlane Styles */
+        .swimlane {
+            position: absolute;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .swimlane-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--bg-darker);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        /* Specific Swimlane Positioning within the canvas */
+        #site-a-swimlane {
+            top: 20px;
+            left: 20px;
+            width: 450px; /* Expanded for CA */
+            height: 350px;
+        }
+        #site-b-swimlane {
+            top: 400px;
+            left: 20px;
+            width: 450px;
+            height: 350px;
+        }
+        #internet-cloud-swimlane {
+            top: 20px;
+            left: 490px;
+            width: 500px;
+            height: 480px; /* Height for public DNS, MDM, Mobile */
+        }
+        #trusted-forest-swimlane {
+            top: 520px; /* 20px gap below internet-cloud */
+            left: 490px;
+            width: 500px;
+            height: 230px; /* Height for Trusted DC */
+        }
+
+
+        /* Device Styles */
+        .device {
+            position: absolute;
+            width: 100px; /* Standardized small width */
+            height: 50px; /* Standardized small height */
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .device:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            z-index: 11;
+        }
+
+        .device-icon {
+            font-size: 20px; /* Standardized small font size */
+            margin-bottom: 3px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .device-name {
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Connection Styles */
+        .connection {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            height: 2px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+            z-index: 5;
+        }
+
+        .connection-label {
+            position: absolute;
+            left: 50%;
+            top: -20px;
+            transform: translateX(-50%);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            color: var(--text-light);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Packet Styles */
+        .packet {
+            position: absolute;
+            width: 20px; /* Standardized small width */
+            height: 20px; /* Standardized small height */
+            border-radius: 50%;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 15;
+            animation: pulse 1.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1700px) {
+            .container { max-width: 98%; padding: 0 10px; }
+            .left-sidebar, .right-sidebar { width: 220px; min-width: 220px; }
+            .network-canvas { height: 750px; }
+
+            #site-a-swimlane { width: 400px; height: 320px; }
+            #site-b-swimlane { top: 370px; width: 400px; height: 320px; }
+            #internet-cloud-swimlane { left: 430px; width: 450px; height: 450px; }
+            #trusted-forest-swimlane { top: 490px; left: 430px; width: 450px; height: 230px; }
+
+            /* Recalibrate devices for smaller canvas */
+            #client_a { x: 60px; y: 100px; }
+            #dns_a { x: 200px; y: 60px; }
+            #dc_a { x: 200px; y: 200px; }
+            #file_server_a { x: 300px; y: 100px; }
+            #ca_server_a { x: 300px; y: 200px; }
+
+            #client_b { x: 60px; y: 450px; }
+            #dns_b { x: 200px; y: 410px; }
+            #dc_b { x: 200px; y: 550px; }
+
+            #public_dns { x: 490px; y: 60px; }
+            #mdm_cloud { x: 490px; y: 250px; }
+            #mobile_device { x: 650px; y: 350px; }
+
+            #dc_trusted_forest { x: 580px; y: 610px; }
+
+            #site_link_ab { x: 400px; y: 340px; }
+            #site_link_ba { x: 400px; y: 410px; }
+        }
+
+        @media (max-width: 1400px) {
+            .left-sidebar, .right-sidebar { width: 180px; min-width: 180px; }
+            .network-canvas { height: 650px; }
+
+            #site-a-swimlane { width: 350px; height: 280px; }
+            #site-b-swimlane { top: 320px; width: 350px; height: 280px; }
+            #internet-cloud-swimlane { left: 380px; width: 400px; height: 380px; }
+            #trusted-forest-swimlane { top: 420px; left: 380px; width: 400px; height: 200px; }
+
+            /* Recalibrate devices for smaller canvas */
+            #client_a { x: 50px; y: 90px; }
+            #dns_a { x: 170px; y: 50px; }
+            #dc_a { x: 170px; y: 180px; }
+            #file_server_a { x: 270px; y: 90px; }
+            #ca_server_a { x: 270px; y: 180px; }
+
+            #client_b { x: 50px; y: 370px; }
+            #dns_b { x: 170px; y: 330px; }
+            #dc_b { x: 170px; y: 460px; }
+
+            #public_dns { x: 400px; y: 50px; }
+            #mdm_cloud { x: 400px; y: 200px; }
+            #mobile_device { x: 550px; y: 300px; }
+
+            #dc_trusted_forest { x: 480px; y: 500px; }
+
+            #site_link_ab { x: 350px; y: 280px; }
+            #site_link_ba { x: 350px; y: 350px; }
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column; /* Stack sidebars and canvas */
+                gap: 15px;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%; /* Full width when stacked */
+                position: static; /* Remove sticky behavior */
+                max-height: 200px; /* Limit height when stacked */
+                padding: 10px;
+            }
+            .right-sidebar { order: 1; } /* Stats on top when stacked */
+            .left-sidebar { order: 3; } /* Legend on bottom when stacked */
+            .network-canvas {
+                order: 2; /* Canvas in middle */
+                height: 550px; /* Reduce canvas height */
+            }
+
+            /* Adjust swimlanes for smaller canvas */
+            #site-a-swimlane, #site-b-swimlane, #internet-cloud-swimlane, #trusted-forest-swimlane {
+                position: relative; /* Make them flow naturally within canvas */
+                top: auto; left: auto;
+                width: calc(100% - 40px); /* Full width minus padding */
+                height: auto;
+                margin: 10px auto; /* Center them */
+                padding: 10px;
+            }
+            .swimlane-label { top: -12px; left: 10px; font-size: 0.9em; padding: 3px 10px; }
+
+            /* Adjust devices within stacked swimlanes */
+            .device {
+                position: relative;
+                top: auto; left: auto;
+                margin: 10px auto; /* Center devices within swimlane */
+                display: flex;
+            }
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columns on wider small screens */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .header p { font-size: 0.9em; }
+            .controls { gap: 8px; }
+            .btn { padding: 8px 15px; font-size: 0.8em; }
+            .network-canvas { height: 450px; }
+            .device { width: 90px; height: 45px; }
+            .device-icon { font-size: 18px; }
+            .device-name { font-size: 9px; }
+            .legend-grid {
+                grid-template-columns: 1fr; /* Single column on very small screens */
+            }
+            .protocol-badges-container { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 IT Training Network Flow Simulation</h1>
+            <p>Interactive Walkthroughs for Active Directory, DNS, DFS, MDM, Cross-Forest, PKI, and LDAP Concepts</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="dcDiscoveryBtn" onclick="NetworkAnimator.startAnimation('dc_discovery')" aria-label="Start DC Discovery">🔍 DC Discovery</button>
+            <button class="btn" id="dnsResolutionBtn" onclick="NetworkAnimator.startAnimation('dns_resolution')" aria-label="Start DNS Resolution">🌐 DNS Resolution</button>
+            <button class="btn" id="intersiteReplicationBtn" onclick="NetworkAnimator.startAnimation('intersite_replication')" aria-label="Start Intersite Replication">🔄 Intersite Repl.</button>
+            <button class="btn" id="dfsAccessBtn" onclick="NetworkAnimator.startAnimation('dfs_access')" aria-label="Start DFS Access">📂 DFS Access</button>
+            <button class="btn" id="mdmEnrollmentBtn" onclick="NetworkAnimator.startAnimation('mdm_enrollment')" aria-label="Start MDM Enrollment">📱 MDM Enrollment</button>
+            <button class="btn" id="crossForestAuthBtn" onclick="NetworkAnimator.startAnimation('cross_forest_auth')" aria-label="Start Cross-Forest Auth">🌳 Cross-Forest</button>
+            <button class="btn" id="pkiCertEnrollmentBtn" onclick="NetworkAnimator.startAnimation('pki_cert_enrollment')" aria-label="Start PKI Certificate Enrollment">📜 PKI Cert Enroll</button>
+            <button class="btn" id="ldapQueryDetailsBtn" onclick="NetworkAnimator.startAnimation('ldap_query_details')" aria-label="Start LDAP Query Details">📚 LDAP Query</button>
+            <button class="btn" id="fullSuiteBtn" onclick="NetworkAnimator.startAnimation('full_suite')" aria-label="Show Full Suite Topology">🗺️ Full Topology</button>
+            <button class="btn" id="stopBtn" onclick="NetworkAnimator.stopAnimation()" aria-label="Stop Animation">⏹️ Stop</button>
+            <button class="btn" id="exportBtn" onclick="NetworkAnimator.exportToCSV()" aria-label="Export to CSV">💾 Export CSV</button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="legend" id="legend">
+                    <h3>Protocol Legend</h3>
+                    <div class="legend-grid">
+                        <!-- Legend items will be created dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-canvas" id="networkCanvas">
+                <!-- Swimlanes -->
+                <div id="site-a-swimlane" class="swimlane">
+                    <span class="swimlane-label">Site A (Main Office)</span>
+                </div>
+                <div id="site-b-swimlane" class="swimlane">
+                    <span class="swimlane-label">Site B (Branch Office)</span>
+                </div>
+                <div id="internet-cloud-swimlane" class="swimlane">
+                    <span class="swimlane-label">Internet / Cloud Services</span>
+                </div>
+                <div id="trusted-forest-swimlane" class="swimlane">
+                    <span class="swimlane-label">Trusted Forest</span>
+                </div>
+
+                <!-- Devices and connections will be created dynamically -->
+            </div>
+
+            <div class="right-sidebar">
+                <div class="stats" id="stats">
+                    <h3>Simulation Stats</h3>
+                    <div>Active Packets: <span id="packetCount">0</span></div>
+                    <div>Status: <span id="status" class="status-text">Ready</span></div>
+                    <div>Active Protocols:</div>
+                    <div id="protocolBadges" class="protocol-badges-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @namespace NetworkAnimator
+         * @description Manages the network animation and visualization for IT training purposes.
+         */
+        const NetworkAnimator = (() => {
+            // --- Configuration ---
+            const config = {
+                devices: {
+                    // Site A (Main Office)
+                    client_a: { symbol: "💻", name: "Client A", x: 60, y: 100, color: "var(--color-client)", type: "Workstation" },
+                    dns_a: { symbol: "🌐", name: "DNS Server A", x: 200, y: 60, color: "var(--color-dns)", type: "Server" },
+                    dc_a: { symbol: "🏢", name: "DC A", x: 200, y: 200, color: "var(--color-dc)", type: "Server" },
+                    file_server_a: { symbol: "🗄️", name: "File Server A", x: 340, y: 100, color: "var(--color-file-server)", type: "Server" },
+                    ca_server_a: { symbol: "📜", name: "CA Server A", x: 340, y: 200, color: "var(--color-ca-server)", type: "Server" },
+
+
+                    // Site B (Branch Office)
+                    client_b: { symbol: "💻", name: "Client B", x: 60, y: 450, color: "var(--color-client)", type: "Workstation" },
+                    dns_b: { symbol: "🌐", name: "DNS Server B", x: 200, y: 410, color: "var(--color-dns)", type: "Server" },
+                    dc_b: { symbol: "🏢", name: "DC B", x: 200, y: 550, color: "var(--color-dc)", type: "Server" },
+
+                    // Internet / Cloud Services (in its own swimlane)
+                    public_dns: { symbol: "🌍", name: "Public DNS", x: 550, y: 60, color: "var(--color-public-dns)", type: "Cloud" },
+                    mdm_cloud: { symbol: "☁️", name: "MDM Cloud", x: 550, y: 400, color: "var(--color-mdm-cloud)", type: "Cloud" },
+                    mobile_device: { symbol: "📱", name: "Mobile Device", x: 750, y: 500, color: "var(--color-mobile)", type: "Mobile" },
+
+                    // Trusted Forest (in its own swimlane)
+                    dc_trusted_forest: { symbol: "🌳", name: "Trusted Forest DC", x: 690, y: 610, color: "var(--color-trusted-dc)", type: "Server" },
+
+                    // Logical Site Link (for visualization, not an actual device)
+                    site_link_ab: { symbol: "🔗", name: "Site Link A-B", x: 470, y: 340, color: "var(--color-site-link)", type: "Network" },
+                    site_link_ba: { symbol: "🔗", name: "Site Link B-A", x: 470, y: 410, color: "var(--color-site-link)", type: "Network" }
+                },
+                flows: {
+                    dc_discovery: {
+                        description: "DC Discovery: Client finds a Domain Controller",
+                        sequence: [
+                            { from: "client_a", to: "dns_a", protocol: "DNS SRV Query", color: "var(--proto-srv-query)", packet: "❓" },
+                            { from: "dns_a", to: "dc_a", protocol: "LDAP Ping", color: "var(--proto-ldap)", packet: "🏓" },
+                            { from: "dc_a", to: "dns_a", protocol: "LDAP Ping Reply", color: "var(--proto-ldap)", packet: "pong" },
+                            { from: "dns_a", to: "client_a", protocol: "DNS SRV Reply (DC-A)", color: "var(--proto-srv-reply)", packet: "✅" },
+                            { from: "client_a", to: "dc_a", protocol: "LDAP Bind/Auth", color: "var(--proto-ldap)", packet: "🔒" }
+                        ]
+                    },
+                    dns_resolution: {
+                        description: "DNS Resolution: Recursive & Iterative",
+                        sequence: [
+                            { from: "client_a", to: "dns_a", protocol: "DNS Query (Recursive)", color: "var(--proto-dns-query)", packet: "www?" },
+                            { from: "dns_a", to: "public_dns", protocol: "DNS Query (Recursive)", color: "var(--proto-dns-query)", packet: "www?" },
+                            { from: "public_dns", to: "public_dns", protocol: "DNS Query (Iterative)", color: "var(--proto-dns-query)", packet: "root?" }, /* Abstraction for iterative */
+                            { from: "public_dns", to: "public_dns", protocol: "DNS Query (Iterative)", color: "var(--proto-dns-query)", packet: "TLD?" }, /* Abstraction for iterative */
+                            { from: "public_dns", to: "public_dns", protocol: "DNS Query (Iterative)", color: "var(--proto-dns-query)", packet: "Auth?" }, /* Abstraction for iterative */
+                            { from: "public_dns", to: "dns_a", protocol: "DNS Reply (Auth)", color: "var(--proto-dns-reply)", packet: "✔️" },
+                            { from: "dns_a", to: "client_a", protocol: "DNS Reply (Cached)", color: "var(--proto-dns-reply)", packet: "✅" }
+                        ]
+                    },
+                    intersite_replication: {
+                        description: "Intersite Replication: AD Data Sync",
+                        sequence: [
+                            { from: "dc_a", to: "site_link_ab", protocol: "AD Replication Req (Site B)", color: "var(--proto-ad-replication)", packet: "🔄" },
+                            { from: "site_link_ab", to: "dc_b", protocol: "AD Replication Req (Site B)", color: "var(--proto-ad-replication)", packet: "🔄" },
+                            { from: "dc_b", to: "site_link_ba", protocol: "AD Replication Data (Site A)", color: "var(--proto-ad-replication)", packet: "📊" },
+                            { from: "site_link_ba", to: "dc_a", protocol: "AD Replication Data (Site A)", color: "var(--proto-ad-replication)", packet: "📊" }
+                        ]
+                    },
+                    dfs_access: {
+                        description: "DFS Access: Client accessing a Distributed File Share",
+                        sequence: [
+                            { from: "client_a", to: "dns_a", protocol: "DNS Query (DFS Namespace)", color: "var(--proto-dns-query)", packet: "DFS?" },
+                            { from: "dns_a", to: "client_a", protocol: "DFS Referral (File Server A)", color: "var(--proto-dfs-referral)", packet: "➡️" },
+                            { from: "client_a", to: "file_server_a", protocol: "SMB Request (File Read)", color: "var(--proto-smb)", packet: "📖" },
+                            { from: "file_server_a", to: "client_a", protocol: "SMB Response (File Data)", color: "var(--proto-smb)", packet: "📄" }
+                        ]
+                    },
+                    mdm_enrollment: {
+                        description: "MDM Enrollment: Mobile Device joins MDM Cloud",
+                        sequence: [
+                            { from: "mobile_device", to: "mdm_cloud", protocol: "MDM Enrollment Request", color: "var(--proto-mdm-enroll)", packet: "🔗" },
+                            { from: "mdm_cloud", to: "mobile_device", protocol: "MDM Enrollment Profile", color: "var(--proto-mdm-profile)", packet: "⬇️" },
+                            { from: "mobile_device", to: "mdm_cloud", protocol: "MDM Compliance Check", color: "var(--proto-mdm-check)", packet: "✔️" },
+                            { from: "mdm_cloud", to: "mobile_device", protocol: "MDM Policy Update", color: "var(--proto-mdm-check)", packet: "⬆️" }
+                        ]
+                    },
+                    cross_forest_auth: {
+                        description: "Cross-Forest Authentication: Client A to Trusted Forest",
+                        sequence: [
+                            { from: "client_a", to: "dns_a", protocol: "DNS Query (Trusted Res.)", color: "var(--proto-dns-query)", packet: "www.tf.com?" },
+                            { from: "dns_a", to: "public_dns", protocol: "DNS Query (Trusted Res.)", color: "var(--proto-dns-query)", packet: "www.tf.com?" },
+                            { from: "public_dns", to: "dns_a", protocol: "DNS Reply (Trusted Res.)", color: "var(--proto-dns-reply)", packet: "✅" },
+                            { from: "client_a", to: "dc_a", protocol: "Kerberos AS-REQ", color: "var(--proto-ldap)", packet: "📋" },
+                            { from: "dc_a", to: "client_a", protocol: "Kerberos AS-REP/TGT", color: "var(--proto-service-ticket)", packet: "🎫" },
+                            { from: "client_a", to: "dc_a", protocol: "Kerberos TGS-REQ (Trusted)", color: "var(--proto-ldap)", packet: "🔍" },
+                            { from: "dc_a", to: "dc_trusted_forest", protocol: "Kerberos Referral (TGT)", color: "var(--proto-kerberos-referral)", packet: "➡️" },
+                            { from: "dc_trusted_forest", to: "dc_a", protocol: "Kerberos Referral (TGT)", color: "var(--proto-kerberos-referral)", packet: "⬅️" },
+                            { from: "dc_a", to: "client_a", protocol: "Service Ticket (Trusted)", color: "var(--proto-service-ticket)", packet: "🎟️" }
+                        ]
+                    },
+                    pki_cert_enrollment: {
+                        description: "PKI Certificate Enrollment: Client requests a certificate",
+                        sequence: [
+                            { from: "client_a", to: "ca_server_a", protocol: "Certificate Request (CSR)", color: "var(--proto-cert-req)", packet: "📝" },
+                            { from: "ca_server_a", to: "client_a", protocol: "Certificate Issued", color: "var(--proto-cert-issue)", packet: "📜" },
+                            { from: "client_a", to: "ca_server_a", protocol: "OCSP/CRL Check", color: "var(--proto-ocsp-crl)", packet: "✔️" }
+                        ]
+                    },
+                    ldap_query_details: {
+                        description: "LDAP Query: Client performing a detailed LDAP search",
+                        sequence: [
+                            { from: "client_a", to: "dc_a", protocol: "LDAP Search Request", color: "var(--proto-ldap)", packet: "🔍" },
+                            { from: "dc_a", to: "client_a", protocol: "LDAP Search Results", color: "var(--proto-ldap)", packet: "📄" }
+                        ]
+                    }
+                },
+                protocolLegend: {
+                    "DNS SRV Query": { color: "var(--proto-srv-query)", symbol: "❓" },
+                    "DNS SRV Reply (DC-A)": { color: "var(--proto-srv-reply)", symbol: "✅" },
+                    "LDAP Ping": { color: "var(--proto-ldap)", symbol: "🏓" },
+                    "LDAP Ping Reply": { color: "var(--proto-ldap)", symbol: "pong" },
+                    "LDAP Bind/Auth": { color: "var(--proto-ldap)", symbol: "🔒" },
+                    "DNS Query (Recursive)": { color: "var(--proto-dns-query)", symbol: "www?" },
+                    "DNS Query (Iterative)": { color: "var(--proto-dns-query)", symbol: "root?" }, /* Simplified for display */
+                    "DNS Reply (Auth)": { color: "var(--proto-dns-reply)", symbol: "✔️" },
+                    "DNS Reply (Cached)": { color: "var(--proto-dns-reply)", symbol: "✅" },
+                    "AD Replication Req (Site B)": { color: "var(--proto-ad-replication)", symbol: "🔄" },
+                    "AD Replication Data (Site A)": { color: "var(--proto-ad-replication)", symbol: "📊" },
+                    "DNS Query (DFS Namespace)": { color: "var(--proto-dns-query)", symbol: "DFS?" },
+                    "DFS Referral (File Server A)": { color: "var(--proto-dfs-referral)", symbol: "➡️" },
+                    "SMB Request (File Read)": { color: "var(--proto-smb)", symbol: "📖" },
+                    "SMB Response (File Data)": { color: "var(--proto-smb)", symbol: "📄" },
+                    "MDM Enrollment Request": { color: "var(--proto-mdm-enroll)", symbol: "🔗" },
+                    "MDM Enrollment Profile": { color: "var(--proto-mdm-profile)", symbol: "⬇️" },
+                    "MDM Compliance Check": { color: "var(--proto-mdm-check)", symbol: "✔️" },
+                    "MDM Policy Update": { color: "var(--proto-mdm-check)", symbol: "⬆️" },
+                    "DNS Query (Trusted Res.)": { color: "var(--proto-dns-query)", symbol: "www?" }, /* New */
+                    "DNS Reply (Trusted Res.)": { color: "var(--proto-dns-reply)", symbol: "✅" }, /* New */
+                    "Kerberos AS-REQ": { color: "var(--proto-ldap)", symbol: "📋" }, /* New */
+                    "Kerberos AS-REP/TGT": { color: "var(--proto-service-ticket)", symbol: "🎫" }, /* New */
+                    "Kerberos TGS-REQ (Trusted)": { color: "var(--proto-ldap)", symbol: "🔍" }, /* New */
+                    "Kerberos Referral (TGT)": { color: "var(--proto-kerberos-referral)", symbol: "➡️" }, /* New */
+                    "Service Ticket (Trusted)": { color: "var(--proto-service-ticket)", symbol: "🎟️" }, /* New */
+                    "Certificate Request (CSR)": { color: "var(--proto-cert-req)", symbol: "📝" }, /* New */
+                    "Certificate Issued": { color: "var(--proto-cert-issue)", symbol: "📜" }, /* New */
+                    "OCSP/CRL Check": { color: "var(--proto-ocsp-crl)", symbol: "✔️" }, /* New */
+                    "LDAP Search Request": { color: "var(--proto-ldap)", symbol: "🔍" }, /* New */
+                    "LDAP Search Results": { color: "var(--proto-ldap)", symbol: "📄" } /* New */
+                },
+                animationSpeed: 0.8,
+                packetSize: 20,
+                deviceWidth: 100,
+                deviceHeight: 50,
+                packetDelayAfterArrival: 750
+            };
+
+            // --- State Variables ---
+            let isRunning = false;
+            let currentFlowType = null;
+            let currentFlowStepIndex = 0;
+            let activePacket = null;
+            let animationFrameId = null;
+            let packetSendTimeoutId = null;
+
+            // --- DOM Elements ---
+            const elements = {
+                networkCanvas: document.getElementById('networkCanvas'),
+                legendGrid: document.querySelector('#legend .legend-grid'),
+                packetCount: document.getElementById('packetCount'),
+                protocolBadges: document.getElementById('protocolBadges'),
+                status: document.getElementById('status'),
+                controlButtons: document.querySelectorAll('.btn')
+            };
+
+            /**
+             * Initializes the network visualization by creating devices and the legend.
+             * @memberof NetworkAnimator
+             */
+            function initializeNetwork() {
+                if (!elements.networkCanvas) return;
+
+                document.querySelectorAll('.device, .connection, .packet').forEach(el => el.remove());
+
+                createDevices();
+                initializeLegend();
+                updateStats();
+                updateStatus('Ready for Training!', 'var(--ready-status)');
+            }
+
+            /**
+             * Creates and appends device elements to the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function createDevices() {
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const deviceElement = document.createElement('div');
+                    deviceElement.className = 'device';
+                    deviceElement.id = id;
+                    deviceElement.style.left = `${device.x}px`;
+                    deviceElement.style.top = `${device.y}px`;
+                    deviceElement.style.borderColor = device.color;
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    deviceElement.style.background = `linear-gradient(45deg, ${colorValue || device.color}20, ${colorValue || device.color}40)`;
+
+                    deviceElement.innerHTML = `
+                        <div class="device-icon">${device.symbol}</div>
+                        <div class="device-name">${device.name}</div>
+                    `;
+
+                    elements.networkCanvas.appendChild(deviceElement);
+                });
+            }
+
+            /**
+             * Populates the protocol legend based on the `config.protocolLegend`.
+             * @memberof NetworkAnimator
+             */
+            function initializeLegend() {
+                if (!elements.legendGrid) return;
+
+                elements.legendGrid.innerHTML = '';
+                Object.entries(config.protocolLegend).forEach(([name, protocol]) => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protocol.color.replace('var(', '--').replace(')', '')).trim();
+
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${colorValue || protocol.color}"></div>
+                        <span>${protocol.symbol} ${name}</span>
+                    `;
+                    elements.legendGrid.appendChild(item);
+                });
+            }
+
+            /**
+             * Starts the animation for a specific flow type (e.g., 'dc_discovery', 'full_suite').
+             * @memberof NetworkAnimator
+             * @param {string} flowType - The type of authentication flow to simulate.
+             */
+            function startAnimation(flowType) {
+                stopAnimation();
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(
+                    flowType === 'full_suite' ? 'fullSuiteBtn' : `${flowType}Btn`
+                );
+                if (activeBtn) activeBtn.classList.add('active');
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+
+                if (flowType === 'full_suite') {
+                    isRunning = false;
+                    currentFlowType = null;
+                    Object.values(config.flows).forEach(flow => {
+                        flow.sequence.forEach(conn => createConnection(conn));
+                    });
+                    updateStatus('FULL TOPOLOGY (Static)', 'var(--ready-status)');
+                    updateStats();
+                } else {
+                    isRunning = true;
+                    currentFlowType = flowType;
+                    currentFlowStepIndex = 0;
+                    updateStatus(config.flows[flowType].description.toUpperCase(), 'var(--ready-status)');
+                    
+                    config.flows[currentFlowType].sequence.forEach(conn => createConnection(conn));
+
+                    packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+
+                    animationFrameId = requestAnimationFrame(animatePackets);
+                }
+            }
+
+            /**
+             * Sends the next packet in the current flow's sequence.
+             * @memberof NetworkAnimator
+             */
+            function sendNextPacketInSequence() {
+                if (!isRunning || !currentFlowType || !config.flows[currentFlowType]) {
+                    return;
+                }
+
+                const flowSequence = config.flows[currentFlowType].sequence;
+
+                if (currentFlowStepIndex < flowSequence.length) {
+                    const connectionStep = flowSequence[currentFlowStepIndex];
+                    createPacket(connectionStep);
+                    updateStats();
+                } else {
+                    stopAnimation();
+                    updateStatus('Flow Completed!', 'var(--ready-status)');
+                }
+            }
+
+            /**
+             * Stops all ongoing animations and clears the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function stopAnimation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (packetSendTimeoutId) {
+                    clearTimeout(packetSendTimeoutId);
+                    packetSendTimeoutId = null;
+                }
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+                activePacket = null;
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                updateStatus('Stopped', 'var(--stopped-status)');
+                updateStats();
+            }
+
+            /**
+             * Creates a visual connection line between two devices.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object (from, to, protocol, color).
+             */
+            function createConnection(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Missing device for connection: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const fromX = fromDevice.x + config.deviceWidth / 2;
+                const fromY = fromDevice.y + config.deviceHeight / 2;
+                const toX = toDevice.x + config.deviceWidth / 2;
+                const toY = toDevice.y + config.deviceHeight / 2;
+
+                const dx = toX - fromX;
+                const dy = toY - fromY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                const connectionEl = document.createElement('div');
+                connectionEl.className = 'connection';
+                connectionEl.style.left = `${fromX}px`;
+                connectionEl.style.top = `${fromY}px`;
+                connectionEl.style.width = `${length}px`;
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                connectionEl.style.background = colorValue || connection.color;
+                connectionEl.style.transform = `rotate(${angle}deg)`;
+
+                connectionEl.innerHTML = `
+                    <span class="connection-label" style="background: ${colorValue || connection.color}80;">
+                        ${connection.protocol}
+                    </span>
+                `;
+
+                elements.networkCanvas.appendChild(connectionEl);
+            }
+
+            /**
+             * Creates an animated packet element and sets it as the active packet.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object for the packet's path.
+             */
+            function createPacket(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Cannot create packet, missing device: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const packetEl = document.createElement('div');
+                packetEl.className = 'packet';
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                packetEl.style.background = colorValue || connection.color;
+                packetEl.textContent = connection.packet;
+
+                elements.networkCanvas.appendChild(packetEl);
+
+                const offsetX = config.deviceWidth / 2 - config.packetSize / 2;
+                const offsetY = config.deviceHeight / 2 - config.packetSize / 2;
+
+                activePacket = {
+                    connection: connection,
+                    element: packetEl,
+                    progress: 0,
+                    fromPos: { x: fromDevice.x + offsetX, y: fromDevice.y + offsetY },
+                    toPos: { x: toDevice.x + offsetX, y: toDevice.y + offsetY }
+                };
+            }
+
+            /**
+             * The main animation loop for packets, called via requestAnimationFrame.
+             * @memberof NetworkAnimator
+             */
+            function animatePackets() {
+                if (!isRunning) {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    return;
+                }
+
+                if (activePacket) {
+                    activePacket.progress += 0.003 * config.animationSpeed;
+
+                    if (activePacket.progress >= 1) {
+                        activePacket.element.remove();
+                        activePacket = null;
+                        currentFlowStepIndex++;
+                        
+                        packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    } else {
+                        const x = activePacket.fromPos.x + (activePacket.toPos.x - activePacket.fromPos.x) * activePacket.progress;
+                        const y = activePacket.fromPos.y + (activePacket.toPos.y - activePacket.fromPos.y) * activePacket.progress;
+
+                        activePacket.element.style.left = `${x}px`;
+                        activePacket.element.style.top = `${y}px`;
+                    }
+                }
+
+                updateStats();
+                animationFrameId = requestAnimationFrame(animatePackets);
+            }
+
+            /**
+             * Updates the statistics display (packet count, active protocols).
+             * @memberof NetworkAnimator
+             */
+            function updateStats() {
+                if (elements.packetCount) {
+                    elements.packetCount.textContent = activePacket ? 1 : 0;
+                }
+
+                if (elements.protocolBadges) {
+                    const uniqueProtocols = new Set();
+                    if (activePacket) {
+                        uniqueProtocols.add(activePacket.connection.protocol);
+                    }
+                    elements.protocolBadges.innerHTML = Array.from(uniqueProtocols).map(protocolName => {
+                        const protoConfig = config.protocolLegend[protocolName];
+                        if (protoConfig) {
+                            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protoConfig.color.replace('var(', '--').replace(')', '')).trim();
+                            return `<span class="protocol-badge" style="background: ${colorValue || protoConfig.color};">${protoConfig.symbol} ${protocolName}</span>`;
+                        }
+                        return '';
+                    }).join('');
+                }
+            }
+
+            /**
+             * Updates the status message displayed on the page.
+             * @memberof NetworkAnimator
+             * @param {string} message - The status message to display.
+             * @param {string} [color] - Optional, a CSS color string for the status text.
+             */
+            function updateStatus(message, color = 'var(--ready-status)') {
+                if (elements.status) {
+                    elements.status.textContent = message;
+                    elements.status.style.color = color;
+                }
+            }
+
+            /**
+             * Exports the current network configuration and flow steps to a CSV file.
+             * @memberof NetworkAnimator
+             */
+            function exportToCSV() {
+                const csvRows = [];
+                csvRows.push('Type,ID,Name,Symbol/Packet,X,Y,Color,Protocol,From,To,FlowStep');
+
+                // Devices
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    csvRows.push(`Device,${id},${device.name},${device.symbol},${device.x},${device.y},${colorValue || device.color},,-,,`);
+                });
+
+                // Flow Steps
+                Object.entries(config.flows).forEach(([flowId, flow]) => {
+                    flow.sequence.forEach((conn, index) => {
+                        const colorValue = getComputedStyle(document.documentElement).getPropertyValue(conn.color.replace('var(', '--').replace(')', '')).trim();
+                        csvRows.push(`Flow Step,,${flowId} - Step ${index + 1},${conn.packet},,,,${colorValue || conn.color},${conn.protocol},${conn.from},${conn.to},${index + 1}`);
+                    });
+                });
+
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'training_network_simulation_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('Training network data exported to CSV successfully!');
+            }
+
+            /**
+             * Handles keyboard input for animation controls.
+             * @memberof NetworkAnimator
+             * @param {KeyboardEvent} e - The keyboard event object.
+             */
+            function handleKeyDown(e) {
+                switch(e.key) {
+                    case '1': NetworkAnimator.startAnimation('dc_discovery'); break;
+                    case '2': NetworkAnimator.startAnimation('dns_resolution'); break;
+                    case '3': NetworkAnimator.startAnimation('intersite_replication'); break;
+                    case '4': NetworkAnimator.startAnimation('dfs_access'); break;
+                    case '5': NetworkAnimator.startAnimation('mdm_enrollment'); break;
+                    case '6': NetworkAnimator.startAnimation('cross_forest_auth'); break;
+                    case '7': NetworkAnimator.startAnimation('pki_cert_enrollment'); break;
+                    case '8': NetworkAnimator.startAnimation('ldap_query_details'); break;
+                    case '9': NetworkAnimator.startAnimation('full_suite'); break; // Adjusted shortcut
+                    case ' ': e.preventDefault(); NetworkAnimator.stopAnimation(); break;
+                    case 'e': e.preventDefault(); NetworkAnimator.exportToCSV(); break;
+                }
+            }
+
+            // --- Public API ---
+            return {
+                initialize: initializeNetwork,
+                startAnimation: startAnimation,
+                stopAnimation: stopAnimation,
+                exportToCSV: exportToCSV,
+                handleKeyDown: handleKeyDown
+            };
+
+        })();
+
+        window.addEventListener('load', NetworkAnimator.initialize);
+        document.addEventListener('keydown', NetworkAnimator.handleKeyDown);
+
+    </script>
+</body>
+</html>
