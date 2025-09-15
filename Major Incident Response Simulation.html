@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Major Incident Response Simulation - Comprehensive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Theme Colors */
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --header-bg: rgba(255, 255, 255, 0.1);
+            --canvas-bg: rgba(255, 255, 255, 0.05);
+            --canvas-border: rgba(255, 255, 255, 0.1);
+            --text-light: #fff;
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --active-red: #ff6b6b;
+            --active-orange: #ee5a24;
+            --stopped-status: #e74c3c;
+            --ready-status: #4CAF50;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+
+            /* Device/Entity Colors */
+            --color-user: #e91e63; /* Pink for affected users */
+            --color-monitoring: #f1c40f; /* Yellow for monitoring */
+            --color-ims: #2196f3; /* Blue for Incident Management System */
+            --color-helpdesk: #9c27b0; /* Purple for Helpdesk */
+            --color-ad-team: #ff5722; /* Deep Orange for AD Team */
+            --color-network-team: #009688; /* Teal for Network Team */
+            --color-app-server-team: #8bc34a; /* Light Green for App Team */
+            --color-incident-commander: #cddc39; /* Lime Green for IC */
+            --color-comms: #673ab7; /* Deep Purple for Comms */
+            --color-impacted: #d32f2f; /* Dark Red for Impacted Infrastructure */
+            --color-healthy: #4caf50; /* Green for Healthy Infrastructure */
+            --color-network-device: #00bcd4; /* Cyan for network devices */
+            --color-app-server: #ffc107; /* Amber for app servers */
+
+
+            /* Protocol/Action Colors (Incident Specific) */
+            --proto-detection: #f1c40f; /* Yellow */
+            --proto-triage: #9c27b0; /* Purple */
+            --proto-escalation: #ff5722; /* Deep Orange */
+            --proto-investigation: #009688; /* Teal */
+            --proto-communication: #673ab7; /* Deep Purple */
+            --proto-remediation: #e67e22; /* Orange */
+            --proto-verification: #4caf50; /* Green */
+            --proto-resolution: #2ecc71; /* Emerald Green */
+            --proto-closure: #34495e; /* Dark Grey */
+            --proto-ticket: #2196f3; /* Blue */
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars due to animations */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 2000px; /* Wider to accommodate sidebars + canvas */
+            margin: 20px auto;
+            padding: 0 20px; /* Adjust padding for sidebars */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: var(--header-bg);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, var(--active-red) 0%, var(--active-orange) 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn.active:hover {
+            box-shadow: 0 12px 30px rgba(255, 107, 107, 0.8);
+        }
+
+        /* Main Content Area (canvas and sidebars) */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+            position: relative; /* For proper positioning of sticky sidebars */
+        }
+
+        /* Sidebars */
+        .left-sidebar, .right-sidebar {
+            width: 250px;
+            min-width: 250px; /* Fixed width for sidebars */
+            max-height: calc(100vh - 40px); /* Limit height to viewport, considering body padding */
+            overflow-y: auto; /* Scroll if content overflows */
+            background: var(--sidebar-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: sticky; /* Sticky positioning within .main-content */
+            top: 20px; /* Distance from top of viewport */
+        }
+
+        .left-sidebar {
+            order: 1; /* Left side */
+        }
+
+        .right-sidebar {
+            order: 3; /* Right side */
+        }
+
+        /* Legend within Left Sidebar */
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column initially */
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Stats within Right Sidebar */
+        .stats h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .stats div:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .status-text {
+            color: var(--ready-status);
+            font-weight: bold;
+        }
+        .protocol-badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: flex-end; /* Align badges to the right */
+        }
+        .protocol-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+
+        /* Network Canvas */
+        .network-canvas {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            height: 850px; /* Adjusted height for more swimlanes */
+            background: var(--canvas-bg);
+            border: 2px solid var(--canvas-border);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            order: 2; /* Middle position */
+        }
+
+        /* Swimlane Styles */
+        .swimlane {
+            position: absolute;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .swimlane-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--bg-darker);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        /* Specific Swimlane Positioning within the canvas */
+        /* All swimlanes made very wide to spread out devices and labels */
+        #monitoring-users-swimlane { top: 20px; left: 20px; width: 1600px; height: 100px; }
+        #helpdesk-swimlane { top: 135px; left: 20px; width: 1600px; height: 100px; } /* 20 + 100 + 15 = 135 */
+        #ad-team-swimlane { top: 250px; left: 20px; width: 1600px; height: 100px; } /* 135 + 100 + 15 = 250 */
+        #network-team-swimlane { top: 365px; left: 20px; width: 1600px; height: 100px; } /* 250 + 100 + 15 = 365 */
+        #app-server-team-swimlane { top: 480px; left: 20px; width: 1600px; height: 100px; } /* 365 + 100 + 15 = 480 */
+        #incident-comms-swimlane { top: 595px; left: 20px; width: 1600px; height: 100px; } /* 480 + 100 + 15 = 595 */
+        #infrastructure-swimlane { top: 710px; left: 20px; width: 1600px; height: 100px; } /* 595 + 100 + 15 = 710 */
+
+
+        /* Device Styles */
+        .device {
+            position: absolute;
+            width: 100px; /* Standardized small width */
+            height: 50px; /* Standardized small height */
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .device:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            z-index: 11;
+        }
+
+        .device-icon {
+            font-size: 20px; /* Standardized small font size */
+            margin-bottom: 3px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .device-name {
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Connection Styles */
+        .connection {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            height: 2px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+            z-index: 5; /* Ensure connections are below labels */
+        }
+
+        .connection-label {
+            position: absolute;
+            left: 50%;
+            top: -20px; /* Position above the line */
+            transform: translateX(-50%);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            color: var(--text-light);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.8); /* Stronger background for readability */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 25; /* CRITICAL: Ensure labels are on top of everything else */
+        }
+
+        /* Packet Styles */
+        .packet {
+            position: absolute;
+            width: 20px; /* Standardized small width */
+            height: 20px; /* Standardized small height */
+            border-radius: 50%;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 15;
+            animation: pulse 1.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1800px) {
+            .container { max-width: 98%; padding: 0 10px; }
+            .left-sidebar, .right-sidebar { width: 220px; min-width: 220px; }
+            .network-canvas { height: 850px; } /* Keeping consistent with base height */
+
+            /* Scale swimlanes */
+            #monitoring-users-swimlane, #helpdesk-swimlane, #ad-team-swimlane,
+            #network-team-swimlane, #app-server-team-swimlane, #incident-comms-swimlane, #infrastructure-swimlane {
+                width: 1200px; /* Reduced width */
+                height: 110px; /* Slightly taller for smaller screens, with 10px gap */
+            }
+
+            /* Adjust top positions */
+            #monitoring-users-swimlane { top: 20px; left: 20px; }
+            #helpdesk-swimlane { top: 140px; left: 20px; } /* 20 + 110 + 10 = 140 */
+            #ad-team-swimlane { top: 260px; left: 20px; } /* 140 + 110 + 10 = 260 */
+            #network-team-swimlane { top: 380px; left: 20px; } /* 260 + 110 + 10 = 380 */
+            #app-server-team-swimlane { top: 500px; left: 20px; } /* 380 + 110 + 10 = 500 */
+            #incident-comms-swimlane { top: 620px; left: 20px; } /* 500 + 110 + 10 = 620 */
+            #infrastructure-swimlane { top: 740px; left: 20px; } /* 620 + 110 + 10 = 740 */
+
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (110 - 50) / 2 = swimlane.top + 30 */
+            #affected_user_base { x: 50px; y: 50px; } /* 20 + 30 */
+            #monitoring_system { x: 300px; y: 50px; }
+            #incident_logging_system { x: 550px; y: 50px; }
+
+            #helpdesk_agent { x: 300px; y: 170px; } /* 140 + 30 */
+
+            #ad_engineer { x: 300px; y: 290px; } /* 260 + 30 */
+
+            #network_engineer { x: 300px; y: 410px; } /* 380 + 30 */
+
+            #app_server_engineer { x: 300px; y: 530px; } /* 500 + 30 */
+
+            #incident_commander { x: 300px; y: 650px; } /* 620 + 30 */
+            #comms_channel { x: 550px; y: 650px; }
+
+            #impacted_dc_01 { x: 100px; y: 770px; } /* 740 + 30 */
+            #healthy_dc_02 { x: 300px; y: 770px; }
+            #core_router_01 { x: 500px; y: 770px; }
+            #core_switch_01 { x: 700px; y: 770px; }
+            #application_server { x: 900px; y: 770px; }
+        }
+
+        @media (max-width: 1400px) {
+            .left-sidebar, .right-sidebar { width: 180px; min-width: 180px; }
+            .network-canvas { height: 750px; } /* Further reduced canvas height */
+
+            #monitoring-users-swimlane, #helpdesk-swimlane, #ad-team-swimlane,
+            #network-team-swimlane, #app-server-team-swimlane, #incident-comms-swimlane, #infrastructure-swimlane {
+                width: 800px; /* Further reduced width */
+                height: 100px; /* Back to 100px height with 10px gaps for this breakpoint */
+            }
+
+            /* Adjust top positions */
+            #monitoring-users-swimlane { top: 20px; left: 20px; }
+            #helpdesk-swimlane { top: 130px; left: 20px; } /* 20 + 100 + 10 = 130 */
+            #ad-team-swimlane { top: 240px; left: 20px; } /* 130 + 100 + 10 = 240 */
+            #network-team-swimlane { top: 350px; left: 20px; } /* 240 + 100 + 10 = 350 */
+            #app-server-team-swimlane { top: 460px; left: 20px; } /* 350 + 100 + 10 = 460 */
+            #incident-comms-swimlane { top: 570px; left: 20px; } /* 460 + 100 + 10 = 570 */
+            #infrastructure-swimlane { top: 680px; left: 20px; } /* 570 + 100 + 10 = 680 */
+
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (100 - 50) / 2 = swimlane.top + 25 */
+            #affected_user_base { x: 40px; y: 45px; } /* 20 + 25 */
+            #monitoring_system { x: 200px; y: 45px; }
+            #incident_logging_system { x: 400px; y: 45px; }
+
+            #helpdesk_agent { x: 200px; y: 155px; } /* 130 + 25 */
+
+            #ad_engineer { x: 200px; y: 265px; } /* 240 + 25 */
+
+            #network_engineer { x: 200px; y: 375px; } /* 350 + 25 */
+
+            #app_server_engineer { x: 200px; y: 485px; } /* 460 + 25 */
+
+            #incident_commander { x: 200px; y: 595px; } /* 570 + 25 */
+            #comms_channel { x: 400px; y: 595px; }
+
+            #impacted_dc_01 { x: 80px; y: 705px; } /* 680 + 25 */
+            #healthy_dc_02 { x: 250px; y: 705px; }
+            #core_router_01 { x: 420px; y: 705px; }
+            #core_switch_01 { x: 590px; y: 705px; }
+            #application_server { x: 760px; y: 705px; }
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column; /* Stack sidebars and canvas */
+                gap: 15px;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%; /* Full width when stacked */
+                position: static; /* Remove sticky behavior */
+                max-height: 200px; /* Limit height when stacked */
+                padding: 10px;
+            }
+            .right-sidebar { order: 1; } /* Stats on top when stacked */
+            .left-sidebar { order: 3; } /* Legend on bottom when stacked */
+            .network-canvas {
+                order: 2; /* Canvas in middle */
+                height: 550px; /* Reduce canvas height */
+            }
+
+            /* Adjust swimlanes for smaller canvas */
+            .swimlane {
+                position: relative; /* Make them flow naturally within canvas */
+                top: auto; left: auto;
+                width: calc(100% - 40px); /* Full width minus padding */
+                height: auto;
+                margin: 10px auto; /* Center them */
+                padding: 10px;
+            }
+            .swimlane-label { top: -12px; left: 10px; font-size: 0.9em; padding: 3px 10px; }
+
+            /* Adjust devices within stacked swimlanes */
+            .device {
+                position: relative;
+                top: auto; left: auto;
+                margin: 10px auto; /* Center devices within swimlane */
+                display: flex;
+            }
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columns on wider small screens */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .header p { font-size: 0.9em; }
+            .controls { gap: 8px; }
+            .btn { padding: 8px 15px; font-size: 0.8em; }
+            .network-canvas { height: 450px; }
+            .device { width: 90px; height: 45px; }
+            .device-icon { font-size: 18px; }
+            .device-name { font-size: 9px; }
+            .legend-grid {
+                grid-template-columns: 1fr; /* Single column on very small screens */
+            }
+            .protocol-badges-container { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Major Incident Response Simulation: Comprehensive 🚨</h1>
+            <p>End-to-End Crisis Management for Diverse IT Outages (Educational Purpose Only)</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="majorAdOutageBtn" onclick="NetworkAnimator.startAnimation('major_ad_outage')" aria-label="Simulate AD Outage">🔥 AD Outage</button>
+            <button class="btn" id="majorDnsOutageBtn" onclick="NetworkAnimator.startAnimation('major_dns_outage')" aria-label="Simulate DNS Outage">🌐 DNS Outage</button>
+            <button class="btn" id="majorNetworkOutageBtn" onclick="NetworkAnimator.startAnimation('major_network_outage')" aria-label="Simulate Network Outage">🔌 Network Outage</button>
+            <button class="btn" id="majorAppPatchingOutageBtn" onclick="NetworkAnimator.startAnimation('major_app_patching_outage')" aria-label="Simulate App Patching Outage">🐞 App Patching</button>
+            <button class="btn" id="majorFsmoOutageBtn" onclick="NetworkAnimator.startAnimation('major_fsmo_outage')" aria-label="Simulate FSMO Outage">👑 FSMO Down</button>
+            <button class="btn" id="fullTopologyBtn" onclick="NetworkAnimator.startAnimation('full_topology')" aria-label="Show Full Topology">🗺️ Full Topology</button>
+            <button class="btn" id="stopBtn" onclick="NetworkAnimator.stopAnimation()" aria-label="Stop Animation">⏹️ Stop</button>
+            <button class="btn" id="exportBtn" onclick="NetworkAnimator.exportToCSV()" aria-label="Export to CSV">💾 Export CSV</button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="legend" id="legend">
+                    <h3>Protocol/Action Legend</h3>
+                    <div class="legend-grid">
+                        <!-- Legend items will be created dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-canvas" id="networkCanvas">
+                <!-- Swimlanes -->
+                <div id="monitoring-users-swimlane" class="swimlane">
+                    <span class="swimlane-label">Monitoring & Users</span>
+                </div>
+                <div id="helpdesk-swimlane" class="swimlane">
+                    <span class="swimlane-label">Helpdesk (L1)</span>
+                </div>
+                <div id="ad-team-swimlane" class="swimlane">
+                    <span class="swimlane-label">Active Directory Team (L2)</span>
+                </div>
+                <div id="network-team-swimlane" class="swimlane">
+                    <span class="swimlane-label">Network Team (L2/L3)</span>
+                </div>
+                <div id="app-server-team-swimlane" class="swimlane">
+                    <span class="swimlane-label">Application & Server Team (L2/L3)</span>
+                </div>
+                <div id="incident-comms-swimlane" class="swimlane">
+                    <span class="swimlane-label">Incident Management & Comms</span>
+                </div>
+                <div id="infrastructure-swimlane" class="swimlane">
+                    <span class="swimlane-label">Infrastructure Layer</span>
+                </div>
+
+                <!-- Devices and connections will be created dynamically -->
+            </div>
+
+            <div class="right-sidebar">
+                <div class="stats" id="stats">
+                    <h3>Incident Status</h3>
+                    <div>Affected Users: <span id="affectedUsersCount">5000</span></div>
+                    <div>Active Packets: <span id="packetCount">0</span></div>
+                    <div>Current Status: <span id="status" class="status-text">Ready</span></div>
+                    <div>Active Protocols:</div>
+                    <div id="protocolBadges" class="protocol-badges-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @namespace NetworkAnimator
+         * @description Manages the network animation and visualization for a Major Incident Response simulation.
+         */
+        const NetworkAnimator = (() => {
+            // --- Configuration ---
+            const config = {
+                devices: {
+                    // Monitoring & Users Swimlane
+                    affected_user_base: { symbol: "🧑‍💻", name: "Affected Users", x: 80, y: 45, color: "var(--color-user)", type: "Users" }, // 20 + 25
+                    monitoring_system: { symbol: "📈", name: "Monitoring System", x: 350, y: 45, color: "var(--color-monitoring)", type: "Monitoring" },
+                    incident_logging_system: { symbol: "🎟️", name: "Incident Log", x: 800, y: 45, color: "var(--color-ims)", type: "System" },
+
+                    // Helpdesk (L1) Swimlane
+                    helpdesk_agent: { symbol: "📞", name: "Helpdesk Agent", x: 350, y: 160, color: "var(--color-helpdesk)", type: "Team" }, // 135 + 25
+
+                    // Active Directory Team (L2) Swimlane
+                    ad_engineer: { symbol: "👨‍💻", name: "AD Engineer (L2)", x: 350, y: 275, color: "var(--color-ad-team)", type: "Team" }, // 250 + 25
+
+                    // Network Team (L2/L3) Swimlane
+                    network_engineer: { symbol: "👨‍🔧", name: "Network Engineer", x: 350, y: 390, color: "var(--color-network-team)", type: "Team" }, // 365 + 25
+
+                    // Application & Server Team (L2/L3) Swimlane
+                    app_server_engineer: { symbol: "👩‍💻", name: "App/Server Engineer", x: 350, y: 505, color: "var(--color-app-server-team)", type: "Team" }, // 480 + 25
+
+                    // Incident Management & Comms Swimlane
+                    incident_commander: { symbol: "🚨", name: "Incident Commander", x: 350, y: 620, color: "var(--color-incident-commander)", type: "Role" }, // 595 + 25
+                    comms_channel: { symbol: "📢", name: "Comms Channel", x: 800, y: 620, color: "var(--color-comms)", type: "Communication" },
+
+                    // Infrastructure Swimlane
+                    impacted_dc_01: { symbol: "⛔", name: "Impacted DC01", x: 100, y: 735, color: "var(--color-impacted)", type: "Server" }, // 710 + 25
+                    healthy_dc_02: { symbol: "✅", name: "Healthy DC02", x: 300, y: 735, color: "var(--color-healthy)", type: "Server" },
+                    core_router_01: { symbol: "📶", name: "Core Router 01", x: 500, y: 735, color: "var(--color-network-device)", type: "Network" },
+                    core_switch_01: { symbol: "🖧", name: "Core Switch 01", x: 700, y: 735, color: "var(--color-network-device)", type: "Network" },
+                    application_server: { symbol: "🖥️", name: "App Server X", x: 900, y: 735, color: "var(--color-app-server)", type: "Server" }
+                },
+                flows: {
+                    full_topology: {
+                        description: "Full Incident Response Topology (Static View)",
+                        sequence: [
+                            // Basic connections for static view
+                            { from: "affected_user_base", to: "monitoring_system", protocol: "User Impact", color: "var(--proto-detection)", packet: "😵" },
+                            { from: "monitoring_system", to: "incident_logging_system", protocol: "Alert Flow", color: "var(--proto-detection)", packet: "🔔" },
+                            { from: "incident_logging_system", to: "helpdesk_agent", protocol: "Ticket Flow", color: "var(--proto-ticket)", packet: "🎫" },
+                            { from: "helpdesk_agent", to: "ad_engineer", protocol: "Escalate AD", color: "var(--proto-escalation)", packet: "⬆️" },
+                            { from: "helpdesk_agent", to: "network_engineer", protocol: "Escalate Net", color: "var(--proto-escalation)", packet: "⬆️" },
+                            { from: "helpdesk_agent", to: "app_server_engineer", protocol: "Escalate App", color: "var(--proto-escalation)", packet: "⬆️" },
+
+                            { from: "ad_engineer", to: "incident_commander", protocol: "Notify IC", color: "var(--proto-escalation)", packet: "🚨" },
+                            { from: "network_engineer", to: "incident_commander", protocol: "Notify IC", color: "var(--proto-escalation)", packet: "🚨" },
+                            { from: "app_server_engineer", to: "incident_commander", protocol: "Notify IC", color: "var(--proto-escalation)", packet: "🚨" },
+                            { from: "incident_commander", to: "comms_channel", protocol: "Communicate", color: "var(--proto-communication)", packet: "📢" },
+
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "AD Check", color: "var(--proto-investigation)", packet: "🔬" },
+                            { from: "ad_engineer", to: "healthy_dc_02", protocol: "AD Check", color: "var(--proto-investigation)", packet: "🔬" },
+                            { from: "network_engineer", to: "core_router_01", protocol: "Net Check", color: "var(--proto-investigation)", packet: "🌐" },
+                            { from: "network_engineer", to: "core_switch_01", protocol: "Net Check", color: "var(--proto-investigation)", packet: "🌐" },
+                            { from: "app_server_engineer", to: "application_server", protocol: "App Check", color: "var(--proto-investigation)", packet: "🖥️" },
+                        ]
+                    },
+                    major_ad_outage: {
+                        description: "Major Incident: Active Directory Service Outage (5000 Users)",
+                        sequence: [
+                            // --- Detection Phase ---
+                            { from: "affected_user_base", to: "helpdesk_agent", protocol: "User Reported Issue", color: "var(--proto-detection)", packet: "😵" },
+                            { from: "monitoring_system", to: "incident_logging_system", protocol: "Monitoring Alert (AD)", color: "var(--proto-detection)", packet: "🔔" },
+                            { from: "incident_logging_system", to: "helpdesk_agent", protocol: "New Incident Ticket", color: "var(--proto-ticket)", packet: "🎫" },
+
+                            // --- Triage & Escalation Phase ---
+                            { from: "helpdesk_agent", to: "impacted_dc_01", protocol: "Basic Connectivity Check", color: "var(--proto-triage)", packet: "🔗" },
+                            { from: "impacted_dc_01", to: "helpdesk_agent", protocol: "Check Failed (AD Down)", color: "var(--proto-triage)", packet: "❌" },
+                            { from: "helpdesk_agent", to: "ad_engineer", protocol: "Escalate to L2 (AD)", color: "var(--proto-escalation)", packet: "⬆️" },
+                            { from: "ad_engineer", to: "incident_logging_system", protocol: "L2 Accepted Incident", color: "var(--proto-ticket)", packet: "✅" },
+                            { from: "ad_engineer", to: "incident_commander", protocol: "Notify Incident Commander", color: "var(--proto-escalation)", packet: "🚨" },
+
+                            // --- Investigation Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Communicate Initial Impact", color: "var(--proto-communication)", packet: "📢" },
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "Check AD Health & Logs", color: "var(--proto-investigation)", packet: "🔬" },
+                            { from: "impacted_dc_01", to: "ad_engineer", protocol: "AD Service Failure Found", color: "var(--proto-investigation)", packet: "💥" },
+                            { from: "ad_engineer", to: "healthy_dc_02", protocol: "Check Replication Status", color: "var(--proto-investigation)", packet: "🔄" },
+                            { from: "healthy_dc_02", to: "ad_engineer", protocol: "Replication Stalled", color: "var(--proto-investigation)", packet: "🛑" },
+                            { from: "ad_engineer", to: "network_engineer", protocol: "Request Network Check", color: "var(--proto-investigation)", packet: "🌐" },
+                            { from: "network_engineer", to: "impacted_dc_01", protocol: "Network Connectivity Test", color: "var(--proto-investigation)", packet: "Ping" },
+                            { from: "impacted_dc_01", to: "network_engineer", protocol: "Network OK, Service Issue", color: "var(--proto-investigation)", packet: "✔️" },
+                            { from: "ad_engineer", to: "incident_commander", protocol: "Root Cause Found (AD Service)", color: "var(--proto-investigation)", packet: "💡" },
+                            { from: "incident_commander", to: "comms_channel", protocol: "Internal Status Update (RCA)", color: "var(--proto-communication)", packet: "✉️" },
+
+                            // --- Remediation Phase ---
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "Remediate: Restart AD Services", color: "var(--proto-remediation)", packet: "⚙️", affectedUsersDecrease: 2500 },
+                            { from: "impacted_dc_01", to: "ad_engineer", protocol: "AD Services Restarted", color: "var(--proto-remediation)", packet: "✅" },
+
+                            // --- Verification Phase ---
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "Verify AD Health", color: "var(--proto-verification)", packet: "🩺" },
+                            { from: "ad_engineer", to: "healthy_dc_02", protocol: "Verify Replication", color: "var(--proto-verification)", packet: "✅" },
+                            { from: "ad_engineer", to: "affected_user_base", protocol: "Test Client Connectivity", color: "var(--proto-verification)", packet: "🧑‍💻", affectedUsersDecrease: 2500 }, /* Final users brought back */
+
+                            // --- Resolution & Closure Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Incident Resolved Communication", color: "var(--proto-resolution)", packet: "🎉" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Close Incident Ticket", color: "var(--proto-closure)", packet: "🔒" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Trigger Post-Mortem Review", color: "var(--proto-closure)", packet: "📝" }
+                        ]
+                    },
+                    major_dns_outage: {
+                        description: "Major Incident: DNS Service Outage (Name Resolution Failure)",
+                        sequence: [
+                            // --- Detection Phase ---
+                            { from: "affected_user_base", to: "helpdesk_agent", protocol: "User Reported: 'Cannot Access Sites'", color: "var(--proto-detection)", packet: "❓" },
+                            { from: "monitoring_system", to: "incident_logging_system", protocol: "Monitoring Alert (DNS)", color: "var(--proto-detection)", packet: "🔔" },
+                            { from: "incident_logging_system", to: "helpdesk_agent", protocol: "New Incident Ticket (DNS)", color: "var(--proto-ticket)", packet: "🎫" },
+
+                            // --- Triage & Escalation Phase ---
+                            { from: "helpdesk_agent", to: "impacted_dc_01", protocol: "Basic DNS Query Test", color: "var(--proto-triage)", packet: "www.google?" },
+                            { from: "impacted_dc_01", to: "helpdesk_agent", protocol: "DNS Query Failed", color: "var(--proto-triage)", packet: "❌" },
+                            { from: "helpdesk_agent", to: "ad_engineer", protocol: "Escalate to L2 (DNS/AD)", color: "var(--proto-escalation)", packet: "⬆️" },
+                            { from: "ad_engineer", to: "incident_commander", protocol: "Notify Incident Commander", color: "var(--proto-escalation)", packet: "🚨" },
+
+                            // --- Investigation Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Communicate Initial Impact", color: "var(--proto-communication)", packet: "📢" },
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "DNS Service Check (DC01)", color: "var(--proto-investigation)", packet: "🔬" },
+                            { from: "impacted_dc_01", to: "ad_engineer", protocol: "DNS Service Stopped/Corrupted", color: "var(--proto-investigation)", packet: "💥" },
+                            { from: "ad_engineer", to: "healthy_dc_02", protocol: "Check DNS Replication (DC02)", color: "var(--proto-investigation)", packet: "🔄" },
+                            { from: "ad_engineer", to: "incident_commander", protocol: "Root Cause Found (DNS Service)", color: "var(--proto-investigation)", packet: "💡" },
+                            { from: "incident_commander", to: "comms_channel", protocol: "Internal Status Update (RCA)", color: "var(--proto-communication)", packet: "✉️" },
+
+                            // --- Remediation Phase ---
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "Remediate: Restart DNS Service", color: "var(--proto-remediation)", packet: "⚙️", affectedUsersDecrease: 2500 },
+                            { from: "impacted_dc_01", to: "ad_engineer", protocol: "DNS Service Restarted", color: "var(--proto-remediation)", packet: "✅" },
+
+                            // --- Verification Phase ---
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "Verify DNS Resolution", color: "var(--proto-verification)", packet: "www.ok?" },
+                            { from: "ad_engineer", to: "affected_user_base", protocol: "Test Client Name Resolution", color: "var(--proto-verification)", packet: "🧑‍💻", affectedUsersDecrease: 2500 },
+
+                            // --- Resolution & Closure Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Incident Resolved Communication", color: "var(--proto-resolution)", packet: "🎉" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Close Incident Ticket", color: "var(--proto-closure)", packet: "🔒" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Trigger Post-Mortem Review", color: "var(--proto-closure)", packet: "📝" }
+                        ]
+                    },
+                    major_network_outage: {
+                        description: "Major Incident: Core Network Outage (No Connectivity)",
+                        sequence: [
+                            // --- Detection Phase ---
+                            { from: "affected_user_base", to: "helpdesk_agent", protocol: "User Reported: 'No Internet/Network'", color: "var(--proto-detection)", packet: "🔌" },
+                            { from: "monitoring_system", to: "incident_logging_system", protocol: "Monitoring Alert (Network)", color: "var(--proto-detection)", packet: "🔔" },
+                            { from: "incident_logging_system", to: "helpdesk_agent", protocol: "New Incident Ticket (Network)", color: "var(--proto-ticket)", packet: "🎫" },
+
+                            // --- Triage & Escalation Phase ---
+                            { from: "helpdesk_agent", to: "core_router_01", protocol: "Basic Ping Test", color: "var(--proto-triage)", packet: "Ping" },
+                            { from: "core_router_01", to: "helpdesk_agent", protocol: "Ping Failed", color: "var(--proto-triage)", packet: "❌" },
+                            { from: "helpdesk_agent", to: "network_engineer", protocol: "Escalate to L2 (Network)", color: "var(--proto-escalation)", packet: "⬆️" },
+                            { from: "network_engineer", to: "incident_commander", protocol: "Notify Incident Commander", color: "var(--proto-escalation)", packet: "🚨" },
+
+                            // --- Investigation Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Communicate Initial Impact", color: "var(--proto-communication)", packet: "📢" },
+                            { from: "network_engineer", to: "core_router_01", protocol: "Check Router Status/Logs", color: "var(--proto-investigation)", packet: "🔬" },
+                            { from: "core_router_01", to: "network_engineer", protocol: "Router Interface Down", color: "var(--proto-investigation)", packet: "💥" },
+                            { from: "network_engineer", to: "core_switch_01", protocol: "Check Switch Connectivity", color: "var(--proto-investigation)", packet: "🔗" },
+                            { from: "network_engineer", to: "incident_commander", protocol: "Root Cause Found (Router)", color: "var(--proto-investigation)", packet: "💡" },
+                            { from: "incident_commander", to: "comms_channel", protocol: "Internal Status Update (RCA)", color: "var(--proto-communication)", packet: "✉️" },
+
+                            // --- Remediation Phase ---
+                            { from: "network_engineer", to: "core_router_01", protocol: "Remediate: Restart Router Port", color: "var(--proto-remediation)", packet: "⚙️", affectedUsersDecrease: 2500 },
+                            { from: "core_router_01", to: "network_engineer", protocol: "Router Port Up", color: "var(--proto-remediation)", packet: "✅" },
+
+                            // --- Verification Phase ---
+                            { from: "network_engineer", to: "core_router_01", protocol: "Verify Routing Tables", color: "var(--proto-verification)", packet: "Routes?" },
+                            { from: "network_engineer", to: "affected_user_base", protocol: "Test Client Network Access", color: "var(--proto-verification)", packet: "🧑‍💻", affectedUsersDecrease: 2500 },
+
+                            // --- Resolution & Closure Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Incident Resolved Communication", color: "var(--proto-resolution)", packet: "🎉" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Close Incident Ticket", color: "var(--proto-closure)", packet: "🔒" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Trigger Post-Mortem Review", color: "var(--proto-closure)", packet: "📝" }
+                        ]
+                    },
+                    major_app_patching_outage: {
+                        description: "Major Incident: Application Outage due to Patching (ERP Down)",
+                        sequence: [
+                            // --- Detection Phase ---
+                            { from: "affected_user_base", to: "helpdesk_agent", protocol: "User Reported: 'ERP Not Working'", color: "var(--proto-detection)", packet: "🚫" },
+                            { from: "monitoring_system", to: "incident_logging_system", protocol: "Monitoring Alert (App Server X)", color: "var(--proto-detection)", packet: "🔔" },
+                            { from: "incident_logging_system", to: "helpdesk_agent", protocol: "New Incident Ticket (App)", color: "var(--proto-ticket)", packet: "🎫" },
+
+                            // --- Triage & Escalation Phase ---
+                            { from: "helpdesk_agent", to: "application_server", protocol: "Basic App Test (Login)", color: "var(--proto-triage)", packet: "Login?" },
+                            { from: "application_server", to: "helpdesk_agent", protocol: "App Test Failed", color: "var(--proto-triage)", packet: "❌" },
+                            { from: "helpdesk_agent", to: "app_server_engineer", protocol: "Escalate to L2 (App/Server)", color: "var(--proto-escalation)", packet: "⬆️" },
+                            { from: "app_server_engineer", to: "incident_commander", protocol: "Notify Incident Commander", color: "var(--proto-escalation)", packet: "🚨" },
+
+                            // --- Investigation Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Communicate Initial Impact", color: "var(--proto-communication)", packet: "📢" },
+                            { from: "app_server_engineer", to: "application_server", protocol: "Review App Server Logs", color: "var(--proto-investigation)", packet: "🔬" },
+                            { from: "application_server", to: "app_server_engineer", protocol: "Error: Recent Patch Conflict", color: "var(--proto-investigation)", packet: "🐞" },
+                            { from: "app_server_engineer", to: "incident_commander", protocol: "Root Cause Found (Patch)", color: "var(--proto-investigation)", packet: "💡" },
+                            { from: "incident_commander", to: "comms_channel", protocol: "Internal Status Update (RCA)", color: "var(--proto-communication)", packet: "✉️" },
+
+                            // --- Remediation Phase ---
+                            { from: "app_server_engineer", to: "application_server", protocol: "Remediate: Rollback Patch", color: "var(--proto-remediation)", packet: "↩️", affectedUsersDecrease: 2500 },
+                            { from: "application_server", to: "app_server_engineer", protocol: "Patch Rolled Back", color: "var(--proto-remediation)", packet: "✅" },
+
+                            // --- Verification Phase ---
+                            { from: "app_server_engineer", to: "application_server", protocol: "Verify App Functionality", color: "var(--proto-verification)", packet: "Test App" },
+                            { from: "app_server_engineer", to: "affected_user_base", protocol: "Test Client ERP Access", color: "var(--proto-verification)", packet: "🧑‍💻", affectedUsersDecrease: 2500 },
+
+                            // --- Resolution & Closure Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Incident Resolved Communication", color: "var(--proto-resolution)", packet: "🎉" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Close Incident Ticket", color: "var(--proto-closure)", packet: "🔒" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Trigger Post-Mortem Review", color: "var(--proto-closure)", packet: "📝" }
+                        ]
+                    },
+                    major_fsmo_outage: {
+                        description: "Major Incident: FSMO Role Holder Down (PDC Emulator)",
+                        sequence: [
+                            // --- Detection Phase ---
+                            { from: "affected_user_base", to: "helpdesk_agent", protocol: "User Reported: 'Time Sync Issue'", color: "var(--proto-detection)", packet: "⏰" }, /* Example specific impact */
+                            { from: "monitoring_system", to: "incident_logging_system", protocol: "Monitoring Alert (FSMO Role Holder)", color: "var(--proto-detection)", packet: "🔔" },
+                            { from: "incident_logging_system", to: "helpdesk_agent", protocol: "New Incident Ticket (FSMO)", color: "var(--proto-ticket)", packet: "🎫" },
+
+                            // --- Triage & Escalation Phase ---
+                            { from: "helpdesk_agent", to: "impacted_dc_01", protocol: "Basic DC Ping", color: "var(--proto-triage)", packet: "Ping" },
+                            { from: "impacted_dc_01", to: "helpdesk_agent", protocol: "Ping Failed (DC01 Down)", color: "var(--proto-triage)", packet: "❌" },
+                            { from: "helpdesk_agent", to: "ad_engineer", protocol: "Escalate to L2 (AD)", color: "var(--proto-escalation)", packet: "⬆️" },
+                            { from: "ad_engineer", to: "incident_commander", protocol: "Notify Incident Commander", color: "var(--proto-escalation)", packet: "🚨" },
+
+                            // --- Investigation Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Communicate Initial Impact", color: "var(--proto-communication)", packet: "📢" },
+                            { from: "ad_engineer", to: "impacted_dc_01", protocol: "Attempt DC Connectivity", color: "var(--proto-investigation)", packet: "🔗" },
+                            { from: "ad_engineer", to: "healthy_dc_02", protocol: "Query FSMO Roles", color: "var(--proto-investigation)", packet: "❓FSMO" },
+                            { from: "healthy_dc_02", to: "ad_engineer", protocol: "PDC Emulator on Impacted DC01", color: "var(--proto-investigation)", packet: "👑" },
+                            { from: "ad_engineer", to: "incident_commander", protocol: "Root Cause Found (PDC Emulator Down)", color: "var(--proto-investigation)", packet: "💡" },
+                            { from: "incident_commander", to: "comms_channel", protocol: "Internal Status Update (RCA)", color: "var(--proto-communication)", packet: "✉️" },
+
+                            // --- Remediation Phase ---
+                            { from: "ad_engineer", to: "healthy_dc_02", protocol: "Remediate: Seize PDC Emulator Role", color: "var(--proto-remediation)", packet: "👑", affectedUsersDecrease: 2500 },
+                            { from: "healthy_dc_02", to: "ad_engineer", protocol: "PDC Emulator Role Seized", color: "var(--proto-remediation)", packet: "✅" },
+
+                            // --- Verification Phase ---
+                            { from: "ad_engineer", to: "healthy_dc_02", protocol: "Verify FSMO Role Health", color: "var(--proto-verification)", packet: "👑🩺" },
+                            { from: "ad_engineer", to: "affected_user_base", protocol: "Test Client Time Sync/Logon", color: "var(--proto-verification)", packet: "🧑‍💻", affectedUsersDecrease: 2500 },
+
+                            // --- Resolution & Closure Phase ---
+                            { from: "incident_commander", to: "comms_channel", protocol: "Incident Resolved Communication", color: "var(--proto-resolution)", packet: "🎉" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Close Incident Ticket", color: "var(--proto-closure)", packet: "🔒" },
+                            { from: "incident_commander", to: "incident_logging_system", protocol: "Trigger Post-Mortem Review", color: "var(--proto-closure)", packet: "📝" }
+                        ]
+                    }
+                },
+                protocolLegend: {
+                    "User Reported Issue": { color: "var(--proto-detection)", symbol: "😵" },
+                    "User Reported: 'Cannot Access Sites'": { color: "var(--proto-detection)", symbol: "❓" },
+                    "User Reported: 'No Internet/Network'": { color: "var(--proto-detection)", symbol: "🔌" },
+                    "User Reported: 'ERP Not Working'": { color: "var(--proto-detection)", symbol: "🚫" },
+                    "User Reported: 'Time Sync Issue'": { color: "var(--proto-detection)", symbol: "⏰" },
+                    "Monitoring Alert (AD)": { color: "var(--proto-detection)", symbol: "🔔" },
+                    "Monitoring Alert (DNS)": { color: "var(--proto-detection)", symbol: "🔔" },
+                    "Monitoring Alert (Network)": { color: "var(--proto-detection)", symbol: "🔔" },
+                    "Monitoring Alert (App Server X)": { color: "var(--proto-detection)", symbol: "🔔" },
+                    "Monitoring Alert (FSMO Role Holder)": { color: "var(--proto-detection)", symbol: "🔔" },
+                    "New Incident Ticket": { color: "var(--proto-ticket)", symbol: "🎫" },
+                    "New Incident Ticket (DNS)": { color: "var(--proto-ticket)", symbol: "🎫" },
+                    "New Incident Ticket (Network)": { color: "var(--proto-ticket)", symbol: "🎫" },
+                    "New Incident Ticket (App)": { color: "var(--proto-ticket)", symbol: "🎫" },
+                    "New Incident Ticket (FSMO)": { color: "var(--proto-ticket)", symbol: "🎫" },
+                    "Basic Connectivity Check": { color: "var(--proto-triage)", symbol: "🔗" },
+                    "Basic DNS Query Test": { color: "var(--proto-triage)", symbol: "www.google?" },
+                    "Basic Ping Test": { color: "var(--proto-triage)", symbol: "Ping" },
+                    "Basic App Test (Login)": { color: "var(--proto-triage)", symbol: "Login?" },
+                    "Basic DC Ping": { color: "var(--proto-triage)", symbol: "Ping" },
+                    "Check Failed (AD Down)": { color: "var(--proto-triage)", symbol: "❌" },
+                    "DNS Query Failed": { color: "var(--proto-triage)", symbol: "❌" },
+                    "Ping Failed": { color: "var(--proto-triage)", symbol: "❌" },
+                    "App Test Failed": { color: "var(--proto-triage)", symbol: "❌" },
+                    "Ping Failed (DC01 Down)": { color: "var(--proto-triage)", symbol: "❌" },
+                    "Escalate to L2 (AD)": { color: "var(--proto-escalation)", symbol: "⬆️" },
+                    "Escalate to L2 (DNS/AD)": { color: "var(--proto-escalation)", symbol: "⬆️" },
+                    "Escalate to L2 (Network)": { color: "var(--proto-escalation)", symbol: "⬆️" },
+                    "Escalate to L2 (App/Server)": { color: "var(--proto-escalation)", symbol: "⬆️" },
+                    "L2 Accepted Incident": { color: "var(--proto-ticket)", symbol: "✅" },
+                    "Notify Incident Commander": { color: "var(--proto-escalation)", symbol: "🚨" },
+                    "Communicate Initial Impact": { color: "var(--proto-communication)", symbol: "📢" },
+                    "Check AD Health & Logs": { color: "var(--proto-investigation)", symbol: "🔬" },
+                    "AD Service Failure Found": { color: "var(--proto-investigation)", symbol: "💥" },
+                    "Check Replication Status": { color: "var(--proto-investigation)", symbol: "🔄" },
+                    "Replication Stalled": { color: "var(--proto-investigation)", symbol: "🛑" },
+                    "Request Network Check": { color: "var(--proto-investigation)", symbol: "🌐" },
+                    "Network Connectivity Test": { color: "var(--proto-investigation)", symbol: "Ping" },
+                    "Network OK, Service Issue": { color: "var(--proto-investigation)", symbol: "✔️" },
+                    "Root Cause Found (AD Service)": { color: "var(--proto-investigation)", symbol: "💡" },
+                    "Internal Status Update (RCA)": { color: "var(--proto-communication)", symbol: "✉️" },
+                    "DNS Service Check (DC01)": { color: "var(--proto-investigation)", symbol: "🔬" },
+                    "DNS Service Stopped/Corrupted": { color: "var(--proto-investigation)", symbol: "💥" },
+                    "Check DNS Replication (DC02)": { color: "var(--proto-investigation)", symbol: "🔄" },
+                    "Root Cause Found (DNS Service)": { color: "var(--proto-investigation)", symbol: "💡" },
+                    "Check Router Status/Logs": { color: "var(--proto-investigation)", symbol: "🔬" },
+                    "Router Interface Down": { color: "var(--proto-investigation)", symbol: "💥" },
+                    "Check Switch Connectivity": { color: "var(--proto-investigation)", symbol: "🔗" },
+                    "Root Cause Found (Router)": { color: "var(--proto-investigation)", symbol: "💡" },
+                    "Review App Server Logs": { color: "var(--proto-investigation)", symbol: "🔬" },
+                    "Error: Recent Patch Conflict": { color: "var(--proto-investigation)", symbol: "🐞" },
+                    "Root Cause Found (Patch)": { color: "var(--proto-investigation)", symbol: "💡" },
+                    "Attempt DC Connectivity": { color: "var(--proto-investigation)", symbol: "🔗" },
+                    "Query FSMO Roles": { color: "var(--proto-investigation)", symbol: "❓FSMO" },
+                    "PDC Emulator on Impacted DC01": { color: "var(--proto-investigation)", symbol: "👑" },
+                    "Root Cause Found (PDC Emulator Down)": { color: "var(--proto-investigation)", symbol: "💡" },
+                    "Remediate: Restart AD Services": { color: "var(--proto-remediation)", symbol: "⚙️" },
+                    "AD Services Restarted": { color: "var(--proto-remediation)", symbol: "✅" },
+                    "Remediate: Restart DNS Service": { color: "var(--proto-remediation)", symbol: "⚙️" },
+                    "DNS Service Restarted": { color: "var(--proto-remediation)", symbol: "✅" },
+                    "Remediate: Restart Router Port": { color: "var(--proto-remediation)", symbol: "⚙️" },
+                    "Router Port Up": { color: "var(--proto-remediation)", symbol: "✅" },
+                    "Remediate: Rollback Patch": { color: "var(--proto-remediation)", symbol: "↩️" },
+                    "Patch Rolled Back": { color: "var(--proto-remediation)", symbol: "✅" },
+                    "Remediate: Seize PDC Emulator Role": { color: "var(--proto-remediation)", symbol: "👑" },
+                    "PDC Emulator Role Seized": { color: "var(--proto-remediation)", symbol: "✅" },
+                    "Verify AD Health": { color: "var(--proto-verification)", symbol: "🩺" },
+                    "Verify Replication": { color: "var(--proto-verification)", symbol: "✅" },
+                    "Test Client Connectivity": { color: "var(--proto-verification)", symbol: "🧑‍💻" },
+                    "Verify DNS Resolution": { color: "var(--proto-verification)", symbol: "www.ok?" },
+                    "Test Client Name Resolution": { color: "var(--proto-verification)", symbol: "🧑‍💻" },
+                    "Verify Routing Tables": { color: "var(--proto-verification)", symbol: "Routes?" },
+                    "Test Client Network Access": { color: "var(--proto-verification)", symbol: "🧑‍💻" },
+                    "Verify App Functionality": { color: "var(--proto-verification)", symbol: "Test App" },
+                    "Test Client ERP Access": { color: "var(--proto-verification)", symbol: "🧑‍💻" },
+                    "Verify FSMO Role Health": { color: "var(--proto-verification)", symbol: "👑🩺" },
+                    "Test Client Time Sync/Logon": { color: "var(--proto-verification)", symbol: "🧑‍💻" },
+                    "Incident Resolved Communication": { color: "var(--proto-resolution)", symbol: "🎉" },
+                    "Close Incident Ticket": { color: "var(--proto-closure)", symbol: "🔒" },
+                    "Trigger Post-Mortem Review": { color: "var(--proto-closure)", symbol: "📝" },
+                    "User Impact": { color: "var(--proto-detection)", symbol: "😵" },
+                    "Alert Flow": { color: "var(--proto-detection)", symbol: "🔔" },
+                    "Ticket Flow": { color: "var(--proto-ticket)", symbol: "🎫" },
+                    "Escalate AD": { color: "var(--proto-escalation)", symbol: "⬆️" },
+                    "Escalate Net": { color: "var(--proto-escalation)", symbol: "⬆️" },
+                    "Escalate App": { color: "var(--proto-escalation)", symbol: "⬆️" },
+                    "Notify IC": { color: "var(--proto-escalation)", symbol: "🚨" },
+                    "Communicate": { color: "var(--proto-communication)", symbol: "📢" },
+                    "AD Check": { color: "var(--proto-investigation)", symbol: "🔬" },
+                    "Net Check": { color: "var(--proto-investigation)", symbol: "🌐" },
+                    "App Check": { color: "var(--proto-investigation)", symbol: "🖥️" }
+                },
+                animationSpeed: 1, // Slightly faster for incident response
+                packetSize: 20,
+                deviceWidth: 100,
+                deviceHeight: 50,
+                packetDelayAfterArrival: 700, // Slightly reduced delay
+                initialAffectedUsers: 5000
+            };
+
+            // --- State Variables ---
+            let isRunning = false;
+            let currentFlowType = null;
+            let currentFlowStepIndex = 0;
+            let activePacket = null;
+            let animationFrameId = null;
+            let packetSendTimeoutId = null;
+            let affectedUsers = config.initialAffectedUsers;
+
+            // --- DOM Elements ---
+            const elements = {
+                networkCanvas: document.getElementById('networkCanvas'),
+                legendGrid: document.querySelector('#legend .legend-grid'),
+                packetCount: document.getElementById('packetCount'),
+                protocolBadges: document.getElementById('protocolBadges'),
+                status: document.getElementById('status'),
+                controlButtons: document.querySelectorAll('.btn'),
+                affectedUsersCount: document.getElementById('affectedUsersCount')
+            };
+
+            /**
+             * Initializes the network visualization by creating devices and the legend.
+             * @memberof NetworkAnimator
+             */
+            function initializeNetwork() {
+                if (!elements.networkCanvas) return;
+
+                document.querySelectorAll('.device, .connection, .packet').forEach(el => el.remove());
+
+                createDevices();
+                initializeLegend();
+                resetStats(); // Reset stats to initial state
+                updateStatus('Ready for Major Incident!', 'var(--ready-status)');
+            }
+
+            /**
+             * Creates and appends device elements to the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function createDevices() {
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const deviceElement = document.createElement('div');
+                    deviceElement.className = 'device';
+                    deviceElement.id = id;
+                    deviceElement.style.left = `${device.x}px`;
+                    deviceElement.style.top = `${device.y}px`;
+                    deviceElement.style.borderColor = device.color;
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    deviceElement.style.background = `linear-gradient(45deg, ${colorValue || device.color}20, ${colorValue || device.color}40)`;
+
+                    deviceElement.innerHTML = `
+                        <div class="device-icon">${device.symbol}</div>
+                        <div class="device-name">${device.name}</div>
+                    `;
+
+                    elements.networkCanvas.appendChild(deviceElement);
+                });
+            }
+
+            /**
+             * Populates the protocol legend based on the `config.protocolLegend`.
+             * @memberof NetworkAnimator
+             */
+            function initializeLegend() {
+                if (!elements.legendGrid) return;
+
+                elements.legendGrid.innerHTML = '';
+                Object.entries(config.protocolLegend).forEach(([name, protocol]) => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protocol.color.replace('var(', '--').replace(')', '')).trim();
+
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${colorValue || protocol.color}"></div>
+                        <span>${protocol.symbol} ${name}</span>
+                    `;
+                    elements.legendGrid.appendChild(item);
+                });
+            }
+
+            /**
+             * Starts the animation for a specific flow type.
+             * @memberof NetworkAnimator
+             * @param {string} flowType - The type of incident flow to simulate.
+             */
+            function startAnimation(flowType) {
+                stopAnimation(); // Stop any previous animation
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(flowType === 'full_topology' ? 'fullTopologyBtn' : `${flowType}Btn`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Clear all dynamic connections and packets before drawing new ones
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+
+                if (flowType === 'full_topology') {
+                    isRunning = false;
+                    currentFlowType = null;
+                    Object.values(config.flows.full_topology.sequence).forEach(conn => createConnection(conn));
+                    updateStatus('FULL TOPOLOGY (Static)', 'var(--ready-status)');
+                    updateStats();
+                } else {
+                    isRunning = true;
+                    currentFlowType = flowType;
+                    currentFlowStepIndex = 0;
+                    affectedUsers = config.initialAffectedUsers; // Reset affected users
+                    updateAffectedUsersDisplay();
+                    updateStatus(config.flows[flowType].description.toUpperCase(), 'var(--active-red)'); // Incident is active!
+                    
+                    // Create all static connection lines for the selected flow
+                    config.flows[currentFlowType].sequence.forEach(conn => createConnection(conn));
+
+                    // Start the first packet in the sequence after a small initial delay
+                    packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+
+                    // Start the animation loop
+                    animationFrameId = requestAnimationFrame(animatePackets);
+                }
+            }
+
+            /**
+             * Sends the next packet in the current flow's sequence.
+             * @memberof NetworkAnimator
+             */
+            function sendNextPacketInSequence() {
+                if (!isRunning || !currentFlowType || !config.flows[currentFlowType]) {
+                    return;
+                }
+
+                const flowSequence = config.flows[currentFlowType].sequence;
+
+                if (currentFlowStepIndex < flowSequence.length) {
+                    const connectionStep = flowSequence[currentFlowStepIndex];
+                    createPacket(connectionStep);
+
+                    // Update affected users if this step specifies a decrease
+                    if (connectionStep.affectedUsersDecrease) {
+                        affectedUsers = Math.max(0, affectedUsers - connectionStep.affectedUsersDecrease);
+                        updateAffectedUsersDisplay();
+                    }
+                    updateStats(); // Update stats when new packet is created
+                } else {
+                    // Flow is complete
+                    stopAnimation();
+                    updateStatus('Incident Closed!', 'var(--ready-status)');
+                    updateAffectedUsersDisplay(0); // Ensure it's 0 at end
+                }
+            }
+
+            /**
+             * Stops all ongoing animations and clears the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function stopAnimation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (packetSendTimeoutId) {
+                    clearTimeout(packetSendTimeoutId);
+                    packetSendTimeoutId = null;
+                }
+
+                // Clear all dynamic connections and packets
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+                activePacket = null; // Ensure no packet object is left in state
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                resetStats();
+            }
+
+            /**
+             * Resets the simulation statistics to their initial state.
+             * @memberof NetworkAnimator
+             */
+            function resetStats() {
+                affectedUsers = config.initialAffectedUsers;
+                updateAffectedUsersDisplay();
+                updateStatus('Ready for Major Incident!', 'var(--ready-status)');
+                updateStats(); // Also clears protocol badges
+            }
+
+            /**
+             * Updates the displayed count of affected users.
+             * @memberof NetworkAnimator
+             * @param {number} [count] - Optional, specific count to set.
+             */
+            function updateAffectedUsersDisplay(count = affectedUsers) {
+                if (elements.affectedUsersCount) {
+                    elements.affectedUsersCount.textContent = count;
+                    elements.affectedUsersCount.style.color = count > 0 ? 'var(--stopped-status)' : 'var(--ready-status)';
+                }
+            }
+
+
+            /**
+             * Creates a visual connection line between two devices.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object (from, to, protocol, color).
+             */
+            function createConnection(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Missing device for connection: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                // Adjust coordinates to be from center of device
+                const fromX = fromDevice.x + config.deviceWidth / 2;
+                const fromY = fromDevice.y + config.deviceHeight / 2;
+                const toX = toDevice.x + config.deviceWidth / 2;
+                const toY = toDevice.y + config.deviceHeight / 2;
+
+                const dx = toX - fromX;
+                const dy = toY - fromY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                const connectionEl = document.createElement('div');
+                connectionEl.className = 'connection';
+                connectionEl.style.left = `${fromX}px`;
+                connectionEl.style.top = `${fromY}px`;
+                connectionEl.style.width = `${length}px`;
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                connectionEl.style.background = colorValue || connection.color;
+                connectionEl.style.transform = `rotate(${angle}deg)`;
+
+                connectionEl.innerHTML = `
+                    <span class="connection-label" style="background: ${colorValue || connection.color}E6;">
+                        ${connection.protocol}
+                    </span>
+                `;
+
+                elements.networkCanvas.appendChild(connectionEl);
+            }
+
+            /**
+             * Creates an animated packet element and sets it as the active packet.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object for the packet's path.
+             */
+            function createPacket(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Cannot create packet, missing device: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const packetEl = document.createElement('div');
+                packetEl.className = 'packet';
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                packetEl.style.background = colorValue || connection.color;
+                packetEl.textContent = connection.packet;
+
+                elements.networkCanvas.appendChild(packetEl);
+
+                // Adjust for packet size to center it relative to device center
+                const offsetX = config.deviceWidth / 2 - config.packetSize / 2;
+                const offsetY = config.deviceHeight / 2 - config.packetSize / 2;
+
+                activePacket = {
+                    connection: connection,
+                    element: packetEl,
+                    progress: 0, // 0 to 1, representing position along the path
+                    fromPos: { x: fromDevice.x + offsetX, y: fromDevice.y + offsetY },
+                    toPos: { x: toDevice.x + offsetX, y: toDevice.y + offsetY }
+                };
+            }
+
+            /**
+             * The main animation loop for packets, called via requestAnimationFrame.
+             * @memberof NetworkAnimator
+             */
+            function animatePackets() {
+                if (!isRunning) {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    return;
+                }
+
+                if (activePacket) {
+                    activePacket.progress += 0.003 * config.animationSpeed; // Slower speed (0.003 base)
+
+                    if (activePacket.progress >= 1) {
+                        // Packet reached destination
+                        activePacket.element.remove();
+                        activePacket = null; // Clear active packet
+                        currentFlowStepIndex++; // Move to next step
+                        
+                        // Introduce a delay before sending the next packet
+                        packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    } else {
+                        const x = activePacket.fromPos.x + (activePacket.toPos.x - activePacket.fromPos.x) * activePacket.progress;
+                        const y = activePacket.fromPos.y + (activePacket.toPos.y - activePacket.fromPos.y) * activePacket.progress;
+
+                        activePacket.element.style.left = `${x}px`;
+                        activePacket.element.style.top = `${y}px`;
+                    }
+                }
+
+                updateStats();
+                animationFrameId = requestAnimationFrame(animatePackets);
+            }
+
+            /**
+             * Updates the statistics display (packet count, active protocols).
+             * @memberof NetworkAnimator
+             */
+            function updateStats() {
+                if (elements.packetCount) {
+                    elements.packetCount.textContent = activePacket ? 1 : 0;
+                }
+
+                if (elements.protocolBadges) {
+                    const uniqueProtocols = new Set();
+                    if (activePacket) {
+                        uniqueProtocols.add(activePacket.connection.protocol);
+                    }
+                    elements.protocolBadges.innerHTML = Array.from(uniqueProtocols).map(protocolName => {
+                        const protoConfig = config.protocolLegend[protocolName];
+                        if (protoConfig) {
+                            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protoConfig.color.replace('var(', '--').replace(')', '')).trim();
+                            return `<span class="protocol-badge" style="background: ${colorValue || protoConfig.color};">${protoConfig.symbol} ${protocolName}</span>`;
+                        }
+                        return '';
+                    }).join('');
+                }
+            }
+
+            /**
+             * Updates the status message displayed on the page.
+             * @memberof NetworkAnimator
+             * @param {string} message - The status message to display.
+             * @param {string} [color] - Optional, a CSS color string for the status text.
+             */
+            function updateStatus(message, color = 'var(--ready-status)') {
+                if (elements.status) {
+                    elements.status.textContent = message;
+                    elements.status.style.color = color;
+                }
+            }
+
+            /**
+             * Exports the current network configuration and flow steps to a CSV file.
+             * @memberof NetworkAnimator
+             */
+            function exportToCSV() {
+                const csvRows = [];
+                csvRows.push('Type,ID,Name,Symbol/Packet,X,Y,Color,Protocol,From,To,FlowStep,AffectedUsersDecrease');
+
+                // Devices
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    csvRows.push(`Device,${id},${device.name},${device.symbol},${device.x},${device.y},${colorValue || device.color},,-,,`);
+                });
+
+                // Flow Steps
+                Object.entries(config.flows).forEach(([flowId, flow]) => {
+                    // Skip full_topology when exporting individual flows, or export it separately
+                    if (flowId === 'full_topology') return; 
+
+                    flow.sequence.forEach((conn, index) => {
+                        const colorValue = getComputedStyle(document.documentElement).getPropertyValue(conn.color.replace('var(', '--').replace(')', '')).trim();
+                        csvRows.push(`Flow Step,,${flowId} - Step ${index + 1},${conn.packet},,,,${colorValue || conn.color},${conn.protocol},${conn.from},${conn.to},${index + 1},${conn.affectedUsersDecrease || ''}`);
+                    });
+                });
+
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'major_incident_simulation_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url); // Clean up
+
+                alert('Major Incident simulation data exported to CSV successfully!');
+            }
+
+            /**
+             * Handles keyboard input for animation controls.
+             * @memberof NetworkAnimator
+             * @param {KeyboardEvent} e - The keyboard event object.
+             */
+            function handleKeyDown(e) {
+                switch(e.key) {
+                    case '1': NetworkAnimator.startAnimation('major_ad_outage'); break;
+                    case '2': NetworkAnimator.startAnimation('major_dns_outage'); break;
+                    case '3': NetworkAnimator.startAnimation('major_network_outage'); break;
+                    case '4': NetworkAnimator.startAnimation('major_app_patching_outage'); break;
+                    case '5': NetworkAnimator.startAnimation('major_fsmo_outage'); break;
+                    case '6': NetworkAnimator.startAnimation('full_topology'); break;
+                    case ' ': e.preventDefault(); NetworkAnimator.stopAnimation(); break; // Prevent space from scrolling
+                    case 'e': e.preventDefault(); NetworkAnimator.exportToCSV(); break;
+                }
+            }
+
+            // --- Public API ---
+            return {
+                initialize: initializeNetwork,
+                startAnimation: startAnimation,
+                stopAnimation: stopAnimation,
+                exportToCSV: exportToCSV,
+                handleKeyDown: handleKeyDown // Expose for event listener
+            };
+
+        })(); // End of IIFE
+
+        // Initialize on load
+        window.addEventListener('load', NetworkAnimator.initialize);
+        // Add keyboard controls
+        document.addEventListener('keydown', NetworkAnimator.handleKeyDown);
+
+    </script>
+</body>
+</html>
