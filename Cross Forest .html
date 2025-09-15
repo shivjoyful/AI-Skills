@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Directory & ADFS Authentication Simulation (v2)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Theme Colors */
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --header-bg: rgba(255, 255, 255, 0.1);
+            --canvas-bg: rgba(255, 255, 255, 0.05);
+            --canvas-border: rgba(255, 255, 255, 0.1);
+            --text-light: #fff;
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --active-red: #ff6b6b;
+            --active-orange: #ee5a24;
+            --stopped-status: #e74c3c;
+            --ready-status: #4CAF50;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+
+            /* Device/Entity Colors (AD & ADFS Specific) */
+            --color-user: #e91e63; /* Pink */
+            --color-dc: #673ab7; /* Deep Purple */
+            --color-file-server: #4caf50; /* Green */
+            --color-forest-root: #00bcd4; /* Cyan */
+            --color-adfs: #2196f3; /* Blue */
+            --color-adfs-proxy: #00897b; /* Teal */
+            --color-rp-app: #ff9800; /* Orange */
+            --color-dns: #9c27b0; /* Purple */
+            --color-firewall: #607d8b; /* Blue Grey */
+            --color-network: #3f51b5; /* Indigo */
+
+            /* Protocol/Action Colors */
+            --proto-request: #ffc107; /* Amber */
+            --proto-challenge: #e74c3c; /* Red */
+            --proto-response: #f39c12; /* Orange */
+            --proto-validation: #673ab7; /* Deep Purple */
+            --proto-success: #4CAF50; /* Green */
+            --proto-kerberos: #2980b9; /* Dark Blue */
+            --proto-ntlm: #c0392b; /* Dark Red */
+            --proto-pass-through: #d35400; /* Pumpkin */
+            --proto-trust: #8e44ad; /* Wisteria */
+            --proto-redirect: #f1c40f; /* Yellow */
+            --proto-token-req: #3498db; /* Peter River */
+            --proto-token-issue: #2ecc71; /* Emerald */
+            --proto-access: #27ae60; /* Nephritis */
+            --proto-ldap: #1abc9c; /* Turquoise */
+            --proto-https: #9b59b6; /* Amethyst */
+            --proto-failure: #e74c3c; /* Red */
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow-x: auto; /* Allow horizontal scroll for wide canvas */
+            overflow-y: hidden; /* Prevent vertical scroll on body if canvas has its own scroll */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 2000px; /* Wider to accommodate sidebars + canvas */
+            margin: 20px auto;
+            padding: 0 20px; /* Adjust padding for sidebars */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: var(--header-bg);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            font-size: 1em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, var(--active-red) 0%, var(--active-orange) 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn.active:hover {
+            box-shadow: 0 12px 30px rgba(255, 107, 107, 0.8);
+        }
+
+        /* Main Content Area (canvas and sidebars) */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+            position: relative; /* For proper positioning of sticky sidebars */
+        }
+
+        /* Sidebars */
+        .left-sidebar, .right-sidebar {
+            width: 200px;
+            min-width: 200px; /* Fixed width for sidebars */
+            max-height: calc(100vh - 40px); /* Limit height to viewport, considering body padding */
+            overflow-y: auto; /* Scroll if content overflows */
+            background: var(--sidebar-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: sticky; /* Sticky positioning within .main-content */
+            top: 20px; /* Distance from top of viewport */
+        }
+
+        .left-sidebar {
+            order: 1; /* Left side */
+        }
+
+        .right-sidebar {
+            order: 3; /* Right side */
+        }
+
+        /* Legend within Left Sidebar */
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column initially */
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Stats within Right Sidebar */
+        .stats h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .stats div:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .status-text {
+            color: var(--ready-status);
+            font-weight: bold;
+        }
+        .protocol-badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: flex-end; /* Align badges to the right */
+        }
+        .protocol-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }   
+
+
+        /* Network Canvas */
+        .network-canvas {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            width: 600px; /* Fixed width for vertical swimlanes */
+            height: 700px; /* Fixed height, will likely scroll horizontally */
+            background: var(--canvas-bg);
+            border: 2px solid var(--canvas-border);
+            border-radius: 10px;
+            overflow: hidden; /* Canvas itself might scroll, but packet animations handle bounds */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            order: 2; /* Middle position */
+        }
+
+        /* Swimlane Styles (VERTICAL) */
+        .swimlane {
+            position: absolute;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+            height: calc(100% - 40px); /* Fill canvas height minus margin */
+            width: 180px; /* Fixed width for each vertical lane */
+        }
+
+        .swimlane-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--bg-darker);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 0.6em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        /* Specific Vertical Swimlane Positioning within the canvas */
+        #user-workstation-swimlane { left: 20px; top: 20px; }
+        #child-domain-a-swimlane { left: 220px; top: 20px; } /* 20 + 180 + 20 = 220 */
+        #forest-root-a-swimlane { left: 420px; top: 20px; } /* 220 + 180 + 20 = 420 */
+        #file-server-resource-swimlane { left: 620px; top: 20px; } /* 420 + 180 + 20 = 620 */
+        #forest-root-b-swimlane { left: 820px; top: 20px; } /* 620 + 180 + 20 = 820 */
+        #child-domain-b-swimlane { left: 1020px; top: 20px; } /* 820 + 180 + 20 = 1020 */
+        #adfs-infrastructure-swimlane { left: 1220px; top: 20px; } /* 1020 + 180 + 20 = 1220 */
+        #relying-party-app-swimlane { left: 1420px; top: 20px; } /* 1220 + 180 + 20 = 1420 */
+
+
+        /* Device Styles */
+        .device {
+            position: absolute;
+            width: 100px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .device:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            z-index: 11;
+        }
+
+        .device-icon {
+            font-size: 20px;
+            margin-bottom: 3px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .device-name {
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Connection Styles */
+        .connection {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            height: 2px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+            z-index: 5; /* Ensure connections are below labels */
+        }
+
+        .connection-label {
+            position: absolute;
+            left: 50%;
+            top: -20px; /* Position above the line */
+            transform: translateX(-50%);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--text-light);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.8); /* Stronger background for readability */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 25; /* CRITICAL: Ensure labels are on top of everything else */
+        }
+
+        /* Packet Styles */
+        .packet {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 15;
+            animation: pulse 1.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Responsive adjustments for smaller screens (still keeping vertical lanes if possible) */
+        @media (max-width: 1400px) {
+            .container { max-width: 98%; padding: 0 10px; }
+            .left-sidebar, .right-sidebar { width: 200px; min-width: 200px; }
+            .network-canvas { width: 1200px; height: 600px; } /* Adjusted canvas size */
+
+            /* Scale down swimlane widths */
+            .swimlane { width: 140px; }
+            #user-workstation-swimlane { left: 10px; }
+            #child-domain-a-swimlane { left: 170px; } /* 20 + 140 + 10 = 170 */
+            #forest-root-a-swimlane { left: 330px; } /* 180 + 140 + 10 = 30 */
+            #file-server-resource-swimlane { left: 500px; } /* 340 + 140 + 20 = 500 */
+            #forest-root-b-swimlane { left: 650px; } /* 500 + 140 + 20 = 660 */
+            #child-domain-b-swimlane { left: 810px; } /* 660 + 140 + 20 = 820 */
+            #adfs-infrastructure-swimlane { left: 970px; } /* 820 + 140 + 20 = 980 */
+            #relying-party-app-swimlane { left: 1130px; } /* 980 + 140 + 20 = 1140 */
+
+            /* Recalibrate device x (left) positions based on new swimlane widths */
+            /* Device center offset within lane = (swimlane_width / 2) - (device_width / 2) = (140 / 2) - (100 / 2) = 70 - 50 = 20px */
+            #user_workstation_a { x: 40px; }
+            #user_workstation_external { x: 40px; }
+
+            #child_dc_a { x: 200px; }
+            #dns_server_internal { x: 200px; }
+
+            #forest_root_dc_a { x: 360px; }
+
+            #file_server_a { x: 520px; }
+
+            #forest_root_dc_b { x: 680px; }
+
+            #child_dc_b { x: 840px; }
+            #file_server_b { x: 840px; }
+
+            #adfs_server_internal { x: 1000px; }
+            #adfs_proxy_dmz { x: 1000px; }
+            #firewall_internal { x: 1000px; }
+            #firewall_external { x: 1000px; }
+
+            #relying_party_app_saas { x: 1160px; }
+            #relying_party_app_internal { x: 1160px; }
+        }
+
+
+       @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column; /* Stack sidebars and canvas */
+                gap: 10px;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%; /* Full width when stacked */
+                position: static; /* Remove sticky behavior */
+                max-height: 200px; /* Limit height when stacked */
+                padding: 10px;
+            }
+            .right-sidebar { order: 1; } /* Stats on top when stacked */
+            .left-sidebar { order: 3; } /* Legend on bottom when stacked */ 
+            .network-canvas {
+                order: 2; /* Canvas in middle */
+                width: calc(100% - 40px); /* Fill available width */
+                height: 500px; /* Reduce canvas height when stacked */
+                overflow-x: auto; /* Allow horizontal scrolling if vertical lanes are too wide */
+            }
+
+            /* Adjust swimlanes for smaller canvas (horizontal scroll will likely occur) */
+            .swimlane {
+                position: relative; /* Make them flow naturally within canvas */
+                top: auto; left: auto;
+                width: 140px; /* Keep defined width */
+                height: calc(100% - 40px);
+                margin: 10px; /* Add margin to separate when horizontal scrolling */
+                display: inline-block; /* Allow them to flow horizontally */
+                vertical-align: top; /* Align to top when inline-block */
+            }
+            .swimlane-label { top: -12px; left: 10px; font-size: 0.9em; padding: 3px 10px; }
+
+            /* Adjust devices within stacked swimlanes */
+            .device {
+                position: relative;
+                top: auto; left: auto;
+                margin: 10px auto; /* Center devices within swimlane */
+                display: flex;
+            }
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columns on wider small screens */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .header p { font-size: 0.9em; }
+            .controls { gap: 8px; }
+            .btn { padding: 8px 15px; font-size: 0.8em; }
+            .network-canvas { height: 400px; }
+            .device { width: 90px; height: 45px; }
+            .device-icon { font-size: 18px; }
+            .device-name { font-size: 9px; }
+            .legend-grid {
+                grid-template-columns: 1fr; /* Single column on very small screens */
+            }
+            .protocol-badges-container { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Active Directory & ADFS Authentication Simulation (v2) 🔐</h1>
+            <p>Kerberos First, NTLM Fallback, and ADFS Federated Identity in Depth</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="ntlm_same_child_domainBtn" onclick="NetworkAnimator.startAnimation('ntlm_same_child_domain')" aria-label="Simulate NTLM Authentication within the same child domain">🔒 NTLM (Same Child)</button>
+            <button class="btn" id="ntlm_parent_user_child_resourceBtn" onclick="NetworkAnimator.startAnimation('ntlm_parent_user_child_resource')" aria-label="Simulate NTLM Authentication for parent domain user accessing child domain resource">🔑 NTLM (Parent-Child)</button>
+            <button class="btn" id="ntlm_cross_forestBtn" onclick="NetworkAnimator.startAnimation('ntlm_cross_forest')" aria-label="Simulate NTLM Authentication across two different forests">🌍 NTLM (Cross-Forest)</button>
+            <button class="btn" id="adfs_internal_accessBtn" onclick="NetworkAnimator.startAnimation('adfs_internal_access')" aria-label="Simulate ADFS Authentication for an internal user">🏢 ADFS (Internal)</button>
+            <button class="btn" id="adfs_external_accessBtn" onclick="NetworkAnimator.startAnimation('adfs_external_access')" aria-label="Simulate ADFS Authentication for an external user">🌐 ADFS (External)</button>
+            <button class="btn" id="full_topologyBtn" onclick="NetworkAnimator.startAnimation('full_topology')" aria-label="Show Full Authentication Topology">🗺️ Full Topology</button>
+            <button class="btn" id="stopBtn" onclick="NetworkAnimator.stopAnimation()" aria-label="Stop Animation">⏹️ Stop</button>
+            <button class="btn" id="exportBtn" onclick="NetworkAnimator.exportToCSV()" aria-label="Export to CSV">💾 Export CSV</button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="legend" id="legend">
+                    <h3>Protocol/Action Legend</h3>
+                    <div class="legend-grid">
+                        <!-- Legend items will be created dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-canvas" id="networkCanvas">
+                <!-- Swimlanes -->
+                <div id="user-workstation-swimlane" class="swimlane">
+                    <span class="swimlane-label">User & Client Workstation</span>
+                </div>
+                <div id="child-domain-a-swimlane" class="swimlane">
+                    <span class="swimlane-label">Child Domain A (sales.contoso.com)</span>
+                </div>
+                <div id="forest-root-a-swimlane" class="swimlane">
+                    <span class="swimlane-label">Forest Root A (contoso.com)</span>
+                </div>
+                <div id="file-server-resource-swimlane" class="swimlane">
+                    <span class="swimlane-label">File Server (Resource)</span>
+                </div>
+                <div id="forest-root-b-swimlane" class="swimlane">
+                    <span class="swimlane-label">Forest Root B (fabrikam.com)</span>
+                </div>
+                <div id="child-domain-b-swimlane" class="swimlane">
+                    <span class="swimlane-label">Child Domain B (hr.fabrikam.com)</span>
+                </div>
+                 <div id="adfs-infrastructure-swimlane" class="swimlane">
+                    <span class="swimlane-label">ADFS Infrastructure (Internal & DMZ)</span>
+                </div>
+                <div id="relying-party-app-swimlane" class="swimlane">
+                    <span class="swimlane-label">Relying Party Application (SaaS/Internal)</span>
+                </div>
+
+                <!-- Devices and connections will be created dynamically -->
+            </div>
+
+            <div class="right-sidebar">
+                <div class="stats" id="stats">
+                    <h3>Authentication Stats</h3>
+                    <div>Status: <span id="authenticationStatus">Idle</span></div>
+                    <div>Protocol: <span id="protocolInUse" class="status-text">None</span></div>
+                    <div>Current Context: <span id="currentContext">N/A</span></div>
+                    <div>Pass-Through Hops: <span id="passThroughHops">0</span></div>
+                    <div>Last Port Used: <span id="lastPortUsed">N/A</span></div>
+                    <div>Resource Accessed: <span id="isResourceAccessed">No</span></div>
+                    <div>Active Protocols:</div>
+                    <div id="protocolBadges" class="protocol-badges-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @namespace NetworkAnimator
+         * @description Manages the network animation and visualization for AD & ADFS Authentication Simulation.
+         */
+        const NetworkAnimator = (() => {
+            // --- Configuration ---
+            const config = {
+                swimlaneWidth: 100,
+                swimlaneGap: 10,
+                deviceWidth: 70,
+                deviceHeight: 30,
+                
+                devices: {
+                    // Lane 1 (User & Client Workstation) - left: 60px
+                    user_workstation_a: { symbol: "🧑‍💻", name: "User (sales.contoso.com)", x: 60, y: 80, color: "var(--color-user)", type: "Client" },
+                    user_workstation_external: { symbol: "🌐", name: "User (External)", x: 60, y: 200, color: "var(--color-user)", type: "Client" },
+
+                    // Lane 2 (Child Domain A) - left: 260px
+                    child_dc_a: { symbol: "🔑", name: "Child DC A", x: 260, y: 80, color: "var(--color-dc)", type: "Domain Controller" },
+                    dns_server_internal: { symbol: "🔎", name: "Internal DNS", x: 260, y: 200, color: "var(--color-dns)", type: "Server" },
+
+                    // Lane 3 (Forest Root A) - left: 460px
+                    forest_root_dc_a: { symbol: "👑", name: "Root DC A", x: 460, y: 80, color: "var(--color-forest-root)", type: "Domain Controller" },
+
+                    // Lane 4 (File Server Resource) - left: 660px
+                    file_server_a: { symbol: "📁", name: "File Server A (sales.contoso.com)", x: 660, y: 80, color: "var(--color-file-server)", type: "Server" },
+
+                    // Lane 5 (Forest Root B) - left: 860px
+                    forest_root_dc_b: { symbol: "👑", name: "Root DC B", x: 860, y: 80, color: "var(--color-forest-root)", type: "Domain Controller" },
+
+                    // Lane 6 (Child Domain B) - left: 1060px
+                    child_dc_b: { symbol: "🔑", name: "Child DC B", x: 1060, y: 80, color: "var(--color-dc)", type: "Domain Controller" },
+                    file_server_b: { symbol: "📁", name: "File Server B (hr.fabrikam.com)", x: 1060, y: 200, color: "var(--color-file-server)", type: "Server" },
+
+                    // Lane 7 (ADFS Infrastructure) - left: 1260px
+                    adfs_server_internal: { symbol: "🔒", name: "ADFS Server (Internal)", x: 1260, y: 80, color: "var(--color-adfs)", type: "ADFS" },
+                    adfs_proxy_dmz: { symbol: "🛡️", name: "ADFS Proxy (DMZ)", x: 1260, y: 200, color: "var(--color-adfs-proxy)", type: "ADFS Proxy" },
+                    firewall_internal: { symbol: "🧱", name: "Internal Firewall", x: 1260, y: 320, color: "var(--color-firewall)", type: "Firewall" },
+                    firewall_external: { symbol: "🌐", name: "External Firewall", x: 1260, y: 440, color: "var(--color-firewall)", type: "Firewall" },
+
+                    // Lane 8 (Relying Party App) - left: 1460px
+                    relying_party_app_saas: { symbol: "☁️", name: "Relying Party App (SaaS)", x: 1460, y: 80, color: "var(--color-rp-app)", type: "Application" },
+                    relying_party_app_internal: { symbol: "🏢", name: "Relying Party App (Internal)", x: 1460, y: 200, color: "var(--color-rp-app)", type: "Application" }
+                },
+                flows: {
+                    full_topology: {
+                        description: "Full Active Directory & ADFS Authentication Topology (Static View)",
+                        sequence: [
+                            // AD-related connections
+                            { from: "user_workstation_a", to: "dns_server_internal", protocol: "DNS Query (TCP/UDP 53)", color: "var(--proto-request)", packet: "❓" },
+                            { from: "user_workstation_a", to: "file_server_a", protocol: "SMB Request (TCP 445)", color: "var(--proto-request)", packet: "➡️" },
+                            { from: "file_server_a", to: "child_dc_a", protocol: "NTLM/Kerberos Auth (RPC/LDAP)", color: "var(--proto-validation)", packet: "🔒" },
+                            { from: "child_dc_a", to: "forest_root_dc_a", protocol: "Trust Auth (RPC/LDAP)", color: "var(--proto-trust)", packet: "🔗" },
+                            { from: "forest_root_dc_a", to: "forest_root_dc_b", protocol: "Forest Trust Auth (RPC/LDAP)", color: "var(--proto-trust)", packet: "🤝" },
+                            { from: "forest_root_dc_b", to: "child_dc_b", protocol: "Trust Auth (RPC/LDAP)", color: "var(--proto-trust)", packet: "🔗" },
+                            { from: "child_dc_b", to: "file_server_b", protocol: "NTLM/Kerberos Auth (RPC/LDAP)", color: "var(--proto-validation)", packet: "🔒" },
+
+                            // ADFS-related connections
+                            { from: "user_workstation_a", to: "dns_server_internal", protocol: "DNS Query (TCP/UDP 53)", color: "var(--proto-request)", packet: "❓" },
+                            { from: "user_workstation_a", to: "adfs_server_internal", protocol: "HTTPS Auth (TCP 443)", color: "var(--proto-https)", packet: "🔒" },
+                            { from: "adfs_server_internal", to: "forest_root_dc_a", protocol: "LDAP Auth (TCP 389/636)", color: "var(--proto-ldap)", packet: "🔑" },
+                            { from: "adfs_server_internal", to: "relying_party_app_internal", protocol: "SAML/OAuth Token (HTTPS 443)", color: "var(--proto-token-issue)", packet: "🎫" },
+                            
+                            { from: "user_workstation_external", to: "firewall_external", protocol: "HTTPS Request (TCP 443)", color: "var(--proto-https)", packet: "➡️" },
+                            { from: "firewall_external", to: "adfs_proxy_dmz", protocol: "HTTPS Request (TCP 443)", color: "var(--proto-https)", packet: "➡️" },
+                            { from: "adfs_proxy_dmz", to: "firewall_internal", protocol: "HTTPS Request (TCP 443)", color: "var(--proto-https)", packet: "➡️" },
+                            { from: "firewall_internal", to: "adfs_server_internal", protocol: "HTTPS Request (TCP 443)", color: "var(--proto-https)", packet: "➡️" },
+                            { from: "adfs_server_internal", to: "relying_party_app_saas", protocol: "SAML/OAuth Token (HTTPS 443)", color: "var(--proto-token-issue)", packet: "🎫" },
+                        ]
+                    },
+                    ntlm_same_child_domain: {
+                        description: "NTLM: User (Child Domain) access File Server (Same Child Domain) - Kerberos First",
+                        sequence: [
+                            // 1. User initiates access (Kerberos first)
+                            { from: "user_workstation_a", to: "file_server_a", protocol: "SMB File Share Request (TCP 445)", color: "var(--proto-request)", packet: "📄", authenticationStatusChange: "Pending", protocolInUseChange: "Kerberos", currentContextChange: "sales.contoso.com", lastPortUsedChange: "TCP 445", isResourceAccessedChange: "No" },
+                            { from: "user_workstation_a", to: "child_dc_a", protocol: "Kerberos Ticket Request (UDP/TCP 88)", color: "var(--proto-kerberos)", packet: "🔑", lastPortUsedChange: "UDP/TCP 88" },
+                            { from: "child_dc_a", to: "user_workstation_a", protocol: "Kerberos Failure: SPN Not Found", color: "var(--proto-failure)", packet: "❌", authenticationStatusChange: "Failed (Kerberos)" },
+                            // 2. Fallback to NTLM - File Server challenges
+                            { from: "file_server_a", to: "user_workstation_a", protocol: "NTLM Challenge (SMB, RPC)", color: "var(--proto-challenge)", packet: "❓", protocolInUseChange: "NTLM", currentContextChange: "sales.contoso.com", lastPortUsedChange: "TCP 445" },
+                            // 3. User responds
+                            { from: "user_workstation_a", to: "file_server_a", protocol: "NTLM Response (SMB, RPC)", color: "var(--proto-response)", packet: "✅" },
+                            // 4. File Server requests validation from local DC
+                            { from: "file_server_a", to: "child_dc_a", protocol: "Validate NTLM (NetLogon/RPC, TCP 445/135)", color: "var(--proto-validation)", packet: "🔒", currentContextChange: "Child DC A", lastPortUsedChange: "TCP 445/135" },
+                            // 5. Child DC validates
+                            { from: "child_dc_a", to: "file_server_a", protocol: "NTLM Validation Success (NetLogon/RPC)", color: "var(--proto-success)", packet: "👍" },
+                            // 6. File Server grants access
+                            { from: "file_server_a", to: "user_workstation_a", protocol: "SMB File Access Granted (TCP 445)", color: "var(--proto-access)", packet: "📁", authenticationStatusChange: "Success", isResourceAccessedChange: "Yes" }
+                        ]
+                    },
+                    ntlm_parent_user_child_resource: {
+                        description: "NTLM: User (Parent Domain) access File Server (Child Domain) - Kerberos First",
+                        sequence: [
+                            // 1. User initiates access (from parent domain) - Kerberos first
+                            { from: "user_workstation_a", to: "file_server_a", protocol: "SMB File Share Request (TCP 445)", color: "var(--proto-request)", packet: "📄", authenticationStatusChange: "Pending", protocolInUseChange: "Kerberos", currentContextChange: "contoso.com", lastPortUsedChange: "TCP 445", isResourceAccessedChange: "No" },
+                            { from: "user_workstation_a", to: "forest_root_dc_a", protocol: "Kerberos Ticket Request (UDP/TCP 88)", color: "var(--proto-kerberos)", packet: "🔑", lastPortUsedChange: "UDP/TCP 88" },
+                            { from: "forest_root_dc_a", to: "user_workstation_a", protocol: "Kerberos Failure: Delegation Issue", color: "var(--proto-failure)", packet: "❌", authenticationStatusChange: "Failed (Kerberos)" },
+                            // 2. Fallback to NTLM - File Server challenges
+                            { from: "file_server_a", to: "user_workstation_a", protocol: "NTLM Challenge (SMB, RPC)", color: "var(--proto-challenge)", packet: "❓", protocolInUseChange: "NTLM", lastPortUsedChange: "TCP 445" },
+                            // 3. User responds
+                            { from: "user_workstation_a", to: "file_server_a", protocol: "NTLM Response (SMB, RPC)", color: "var(--proto-response)", packet: "✅" },
+                            // 4. File Server sends NTLM to its local Child DC
+                            { from: "file_server_a", to: "child_dc_a", protocol: "Validate NTLM (NetLogon/RPC, TCP 445/135)", color: "var(--proto-validation)", packet: "🔒", currentContextChange: "Child DC A", lastPortUsedChange: "TCP 445/135" },
+                            // 5. Child DC recognizes user is from parent, performs pass-through
+                            { from: "child_dc_a", to: "forest_root_dc_a", protocol: "NTLM Pass-Through (NetLogon/RPC, TCP 445/135)", color: "var(--proto-pass-through)", packet: "➡️", currentContextChange: "Root DC A", passThroughHopsChange: 1 },
+                            // 6. Root DC validates
+                            { from: "forest_root_dc_a", to: "child_dc_a", protocol: "NTLM Validation Success (NetLogon/RPC)", color: "var(--proto-success)", packet: "👍" },
+                            // 7. Child DC informs File Server
+                            { from: "child_dc_a", to: "file_server_a", protocol: "NTLM Validation Success (NetLogon/RPC)", color: "var(--proto-success)", packet: "👍", passThroughHopsChange: 0 },
+                            // 8. File Server grants access
+                            { from: "file_server_a", to: "user_workstation_a", protocol: "SMB File Access Granted (TCP 445)", color: "var(--proto-access)", packet: "📁", authenticationStatusChange: "Success", isResourceAccessedChange: "Yes" }
+                        ]
+                    },
+                    ntlm_cross_forest: {
+                        description: "NTLM: User (Forest A Child A) access File Server (Forest B Child B) - Kerberos First",
+                        sequence: [
+                            // 1. User initiates access (from Forest A, Child A) - Kerberos first
+                            { from: "user_workstation_a", to: "file_server_b", protocol: "SMB File Share Request (TCP 445)", color: "var(--proto-request)", packet: "📄", authenticationStatusChange: "Pending", protocolInUseChange: "Kerberos", currentContextChange: "sales.contoso.com", lastPortUsedChange: "TCP 445", isResourceAccessedChange: "No" },
+                            { from: "user_workstation_a", to: "child_dc_a", protocol: "Kerberos Ticket Request (UDP/TCP 88)", color: "var(--proto-kerberos)", packet: "🔑", lastPortUsedChange: "UDP/TCP 88" },
+                            { from: "child_dc_a", to: "forest_root_dc_a", protocol: "Kerberos Referral to Root A (UDP/TCP 88)", color: "var(--proto-kerberos)", packet: "➡️" },
+                            { from: "forest_root_dc_a", to: "forest_root_dc_b", protocol: "Kerberos Referral to Root B (UDP/TCP 88) - Fails", color: "var(--proto-failure)", packet: "❌" },
+                            { from: "forest_root_dc_b", to: "user_workstation_a", protocol: "Kerberos Failure: Cross-Forest SPN Mismatch", color: "var(--proto-failure)", packet: "❌", authenticationStatusChange: "Failed (Kerberos)" },
+                            // 2. Fallback to NTLM - File Server B challenges
+                            { from: "file_server_b", to: "user_workstation_a", protocol: "NTLM Challenge (SMB, RPC)", color: "var(--proto-challenge)", packet: "❓", protocolInUseChange: "NTLM", lastPortUsedChange: "TCP 445" },
+                            // 3. User responds
+                            { from: "user_workstation_a", to: "file_server_b", protocol: "NTLM Response (SMB, RPC)", color: "var(--proto-response)", packet: "✅" },
+                            // 4. File Server B sends NTLM to its local Child DC B (Forest B)
+                            { from: "file_server_b", to: "child_dc_b", protocol: "Validate NTLM (NetLogon/RPC, TCP 445/135)", color: "var(--proto-validation)", packet: "🔒", currentContextChange: "Child DC B", lastPortUsedChange: "TCP 445/135" },
+                            // 5. Child DC B recognizes user is external, pass-through to Root DC B (Forest B)
+                            { from: "child_dc_b", to: "forest_root_dc_b", protocol: "NTLM Pass-Through (NetLogon/RPC, TCP 445/135)", color: "var(--proto-pass-through)", packet: "➡️", currentContextChange: "Root DC B", passThroughHopsChange: 1 },
+                            // 6. Root DC B uses forest trust to pass-through to Root DC A (Forest A)
+                            { from: "forest_root_dc_b", to: "forest_root_dc_a", protocol: "NTLM Pass-Through (Forest Trust, RPC, TCP 445/135)", color: "var(--proto-trust)", packet: "🤝", currentContextChange: "Root DC A", passThroughHopsChange: 2 },
+                            // 7. Root DC A passes through to Child DC A (Forest A)
+                            { from: "forest_root_dc_a", to: "child_dc_a", protocol: "NTLM Pass-Through (NetLogon/RPC, TCP 445/135)", color: "var(--proto-pass-through)", packet: "➡️", currentContextChange: "Child DC A", passThroughHopsChange: 3 },
+                            // 8. Child DC A validates the user
+                            { from: "child_dc_a", to: "forest_root_dc_a", protocol: "NTLM Validation Success (NetLogon/RPC)", color: "var(--proto-success)", packet: "👍" },
+                            // 9. Root DC A returns success to Root DC B
+                            { from: "forest_root_dc_a", to: "forest_root_dc_b", protocol: "NTLM Validation Success (Forest Trust, RPC)", color: "var(--proto-trust)", packet: "👍", currentContextChange: "Root DC B", passThroughHopsChange: 2 },
+                            // 10. Root DC B returns success to Child DC B
+                            { from: "forest_root_dc_b", to: "child_dc_b", protocol: "NTLM Validation Success (NetLogon/RPC)", color: "var(--proto-success)", packet: "👍", currentContextChange: "Child DC B", passThroughHopsChange: 1 },
+                            // 11. Child DC B informs File Server B
+                            { from: "child_dc_b", to: "file_server_b", protocol: "NTLM Validation Success (NetLogon/RPC)", color: "var(--proto-success)", packet: "👍", passThroughHopsChange: 0 },
+                            // 12. File Server B grants access
+                            { from: "file_server_b", to: "user_workstation_a", protocol: "SMB File Access Granted (TCP 445)", color: "var(--proto-access)", packet: "📁", authenticationStatusChange: "Success", isResourceAccessedChange: "Yes" }
+                        ]
+                    },
+                    adfs_internal_access: {
+                        description: "ADFS: Internal User Accessing Relying Party Application",
+                        sequence: [
+                            // 1. User tries to access RP App
+                            { from: "user_workstation_a", to: "relying_party_app_internal", protocol: "Access RP App (HTTPS 443)", color: "var(--proto-request)", packet: "➡️", authenticationStatusChange: "Pending", protocolInUseChange: "SAML/OAuth", currentContextChange: "Internal Network", lastPortUsedChange: "TCP 443", isResourceAccessedChange: "No" },
+                            // 2. RP App redirects to ADFS
+                            { from: "relying_party_app_internal", to: "user_workstation_a", protocol: "HTTP 302 Redirect to ADFS (HTTPS 443)", color: "var(--proto-redirect)", packet: "↪️" },
+                            // 3. User's browser contacts internal ADFS
+                            { from: "user_workstation_a", to: "adfs_server_internal", protocol: "Authentication Request to ADFS (HTTPS 443)", color: "var(--proto-request)", packet: "🔒" },
+                            // 4. ADFS authenticates user against DC
+                            { from: "adfs_server_internal", to: "forest_root_dc_a", protocol: "User Authentication (LDAP/Kerberos, TCP 389/636/88)", color: "var(--proto-ldap)", packet: "🔑", currentContextChange: "ADFS Server", lastPortUsedChange: "TCP 389/636/88" },
+                            // 5. DC responds to ADFS
+                            { from: "forest_root_dc_a", to: "adfs_server_internal", protocol: "Authentication Response (LDAP/Kerberos)", color: "var(--proto-success)", packet: "👍" },
+                            // 6. ADFS issues SAML token
+                            { from: "adfs_server_internal", to: "user_workstation_a", protocol: "Issue SAML Token to Browser (HTTPS 443)", color: "var(--proto-token-issue)", packet: "🎫", lastPortUsedChange: "TCP 443" },
+                            // 7. Browser sends token to RP App
+                            { from: "user_workstation_a", to: "relying_party_app_internal", protocol: "Present SAML Token to RP App (HTTPS 443)", color: "var(--proto-token-req)", packet: "🎟️" },
+                            // 8. RP App validates token and grants access
+                            { from: "relying_party_app_internal", to: "user_workstation_a", protocol: "Access Granted (HTTPS 443)", color: "var(--proto-access)", packet: "✅", authenticationStatusChange: "Success", isResourceAccessedChange: "Yes" }
+                        ]
+                    },
+                    adfs_external_access: {
+                        description: "ADFS: External User Accessing Relying Party Application",
+                        sequence: [
+                            // 1. External User tries to access RP App
+                            { from: "user_workstation_external", to: "relying_party_app_saas", protocol: "Access RP App (HTTPS 443)", color: "var(--proto-request)", packet: "➡️", authenticationStatusChange: "Pending", protocolInUseChange: "SAML/OAuth", currentContextChange: "External Network", lastPortUsedChange: "TCP 443", isResourceAccessedChange: "No" },
+                            // 2. RP App redirects to ADFS (via ADFS Proxy FQDN)
+                            { from: "relying_party_app_saas", to: "user_workstation_external", protocol: "HTTP 302 Redirect to ADFS (HTTPS 443)", color: "var(--proto-redirect)", packet: "↪️" },
+                            // 3. External User's browser contacts ADFS Proxy
+                            { from: "user_workstation_external", to: "firewall_external", protocol: "Auth Request to ADFS Proxy (HTTPS 443)", color: "var(--proto-https)", packet: "🔒", currentContextChange: "External Firewall", lastPortUsedChange: "TCP 443" },
+                            { from: "firewall_external", to: "adfs_proxy_dmz", protocol: "Forward to ADFS Proxy (HTTPS 443)", color: "var(--proto-https)", packet: "➡️", currentContextChange: "DMZ (ADFS Proxy)" },
+                            // 4. ADFS Proxy forwards to internal ADFS
+                            { from: "adfs_proxy_dmz", to: "firewall_internal", protocol: "Forward Auth Request to ADFS (HTTPS 443)", color: "var(--proto-https)", packet: "➡️", currentContextChange: "Internal Firewall" },
+                            { from: "firewall_internal", to: "adfs_server_internal", protocol: "Forward Auth Request to ADFS (HTTPS 443)", color: "var(--proto-https)", packet: "➡️", currentContextChange: "ADFS Server" },
+                            // 5. ADFS authenticates user against internal DC
+                            { from: "adfs_server_internal", to: "forest_root_dc_a", protocol: "User Authentication (LDAP/Kerberos, TCP 389/636/88)", color: "var(--proto-ldap)", packet: "🔑", lastPortUsedChange: "TCP 389/636/88" },
+                            // 6. DC responds to ADFS
+                            { from: "forest_root_dc_a", to: "adfs_server_internal", protocol: "Authentication Response (LDAP/Kerberos)", color: "var(--proto-success)", packet: "👍" },
+                            // 7. ADFS issues SAML token (back through proxy if stateful, otherwise direct to browser)
+                            { from: "adfs_server_internal", to: "user_workstation_external", protocol: "Issue SAML Token to Browser (HTTPS 443)", color: "var(--proto-token-issue)", packet: "🎫", currentContextChange: "External Network", lastPortUsedChange: "TCP 443" },
+                            // 8. Browser sends token to RP App
+                            { from: "user_workstation_external", to: "relying_party_app_saas", protocol: "Present SAML Token to RP App (HTTPS 443)", color: "var(--proto-token-req)", packet: "🎟️" },
+                            // 9. RP App validates token and grants access
+                            { from: "relying_party_app_saas", to: "user_workstation_external", protocol: "Access Granted (HTTPS 443)", color: "var(--proto-access)", packet: "✅", authenticationStatusChange: "Success", isResourceAccessedChange: "Yes" }
+                        ]
+                    }
+                },
+                protocolLegend: {
+                    // Core NTLM & Kerberos
+                    "SMB File Share Request (TCP 445)": { color: "var(--proto-request)", symbol: "📄" },
+                    "Kerberos Ticket Request (UDP/TCP 88)": { color: "var(--proto-kerberos)", symbol: "🔑" },
+                    "Kerberos Referral to Root A (UDP/TCP 88)": { color: "var(--proto-kerberos)", symbol: "➡️" },
+                    "Kerberos Referral to Root B (UDP/TCP 88) - Fails": { color: "var(--proto-failure)", symbol: "❌" },
+                    "Kerberos Failure: SPN Not Found": { color: "var(--proto-failure)", symbol: "❌" },
+                    "Kerberos Failure: Delegation Issue": { color: "var(--proto-failure)", symbol: "❌" },
+                    "Kerberos Failure: Cross-Forest SPN Mismatch": { color: "var(--proto-failure)", symbol: "❌" },
+                    "NTLM Challenge (SMB, RPC)": { color: "var(--proto-challenge)", symbol: "❓" },
+                    "NTLM Response (SMB, RPC)": { color: "var(--proto-response)", symbol: "✅" },
+                    "Validate NTLM (NetLogon/RPC, TCP 445/135)": { color: "var(--proto-validation)", symbol: "🔒" },
+                    "NTLM Pass-Through (NetLogon/RPC, TCP 445/135)": { color: "var(--proto-pass-through)", symbol: "➡️" },
+                    "NTLM Pass-Through (Forest Trust, RPC, TCP 445/135)": { color: "var(--proto-trust)", symbol: "🤝" },
+                    "NTLM Validation Success (NetLogon/RPC)": { color: "var(--proto-success)", symbol: "👍" },
+                    "NTLM Validation Success (Forest Trust, RPC)": { color: "var(--proto-trust)", symbol: "👍" },
+                    "SMB File Access Granted (TCP 445)": { color: "var(--proto-access)", symbol: "📁" },
+
+                    // ADFS Specific
+                    "Access RP App (HTTPS 443)": { color: "var(--proto-request)", symbol: "➡️" },
+                    "HTTP 302 Redirect to ADFS (HTTPS 443)": { color: "var(--proto-redirect)", symbol: "↪️" },
+                    "Authentication Request to ADFS (HTTPS 443)": { color: "var(--proto-request)", symbol: "🔒" },
+                    "User Authentication (LDAP/Kerberos, TCP 389/636/88)": { color: "var(--proto-ldap)", symbol: "🔑" },
+                    "Authentication Response (LDAP/Kerberos)": { color: "var(--proto-success)", symbol: "👍" },
+                    "Issue SAML Token to Browser (HTTPS 443)": { color: "var(--proto-token-issue)", symbol: "🎫" },
+                    "Present SAML Token to RP App (HTTPS 443)": { color: "var(--proto-token-req)", symbol: "🎟️" },
+                    "Access Granted (HTTPS 443)": { color: "var(--proto-access)", symbol: "✅" },
+                    "Auth Request to ADFS Proxy (HTTPS 443)": { color: "var(--proto-https)", symbol: "🔒" },
+                    "Forward to ADFS Proxy (HTTPS 443)": { color: "var(--proto-https)", symbol: "➡️" },
+                    "Forward Auth Request to ADFS (HTTPS 443)": { color: "var(--proto-https)", symbol: "➡️" },
+                    "DNS Query (TCP/UDP 53)": { color: "var(--proto-request)", packet: "❓" },
+
+                    // Full Topology General
+                    "SMB Request (TCP 445)": { color: "var(--proto-request)", packet: "➡️" },
+                    "NTLM/Kerberos Auth (RPC/LDAP)": { color: "var(--proto-validation)", packet: "🔒" },
+                    "Trust Auth (RPC/LDAP)": { color: "var(--proto-trust)", packet: "🔗" },
+                    "Forest Trust Auth (RPC/LDAP)": { color: "var(--proto-trust)", packet: "🤝" },
+                    "HTTPS Auth (TCP 443)": { color: "var(--proto-https)", packet: "🔒" },
+                    "LDAP Auth (TCP 389/636)": { color: "var(--proto-ldap)", packet: "🔑" },
+                    "SAML/OAuth Token (HTTPS 443)": { color: "var(--proto-token-issue)", packet: "🎫" },
+                    "HTTPS Request (TCP 443)": { color: "var(--proto-https)", packet: "➡️" }
+                },
+                animationSpeed: 1,
+                packetSize: 20,
+                packetDelayAfterArrival: 700,
+                
+                // Initial Stat Values
+                initialAuthenticationStatus: "Idle",
+                initialProtocolInUse: "None",
+                initialCurrentContext: "N/A",
+                initialPassThroughHops: 0,
+                initialLastPortUsed: "N/A",
+                initialIsResourceAccessed: "No"
+            };
+
+            // --- State Variables ---
+            let isRunning = false;
+            let currentFlowType = null;
+            let currentFlowStepIndex = 0;
+            let activePacket = null;
+            let animationFrameId = null;
+            let packetSendTimeoutId = null;
+            
+            // Stats
+            let authenticationStatus = config.initialAuthenticationStatus;
+            let protocolInUse = config.initialProtocolInUse;
+            let currentContext = config.initialCurrentContext;
+            let passThroughHops = config.initialPassThroughHops;
+            let lastPortUsed = config.initialLastPortUsed;
+            let isResourceAccessed = config.initialIsResourceAccessed;
+
+            // --- DOM Elements ---
+            const elements = {
+                networkCanvas: document.getElementById('networkCanvas'),
+                legendGrid: document.querySelector('#legend .legend-grid'),
+                packetCount: document.getElementById('packetCount'),
+                protocolBadges: document.getElementById('protocolBadges'),
+                status: document.getElementById('status'),
+                controlButtons: document.querySelectorAll('.btn'),
+                
+                // Stats elements
+                authenticationStatus: document.getElementById('authenticationStatus'),
+                protocolInUse: document.getElementById('protocolInUse'),
+                currentContext: document.getElementById('currentContext'),
+                passThroughHops: document.getElementById('passThroughHops'),
+                lastPortUsed: document.getElementById('lastPortUsed'),
+                isResourceAccessed: document.getElementById('isResourceAccessed')
+            };
+
+            /**
+             * Initializes the network visualization by creating devices and the legend.
+             * @memberof NetworkAnimator
+             */
+            function initializeNetwork() {
+                if (!elements.networkCanvas) return;
+
+                document.querySelectorAll('.device, .connection, .packet').forEach(el => el.remove());
+
+                createDevices();
+                initializeLegend();
+                resetStats();
+                updateStatus('Ready for Authentication Simulation!', 'var(--ready-status)');
+            }
+
+            /**
+             * Creates and appends device elements to the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function createDevices() {
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const deviceElement = document.createElement('div');
+                    deviceElement.className = 'device';
+                    deviceElement.id = id;
+                    deviceElement.style.left = `${device.x}px`;
+                    deviceElement.style.top = `${device.y}px`;
+                    deviceElement.style.borderColor = device.color;
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    deviceElement.style.background = `linear-gradient(45deg, ${colorValue || device.color}20, ${colorValue || device.color}40)`;
+
+                    deviceElement.innerHTML = `
+                        <div class="device-icon">${device.symbol}</div>
+                        <div class="device-name">${device.name}</div>
+                    `;
+
+                    elements.networkCanvas.appendChild(deviceElement);
+                });
+            }
+
+            /**
+             * Populates the protocol legend based on the `config.protocolLegend`.
+             * @memberof NetworkAnimator
+             */
+            function initializeLegend() {
+                if (!elements.legendGrid) return;
+
+                elements.legendGrid.innerHTML = '';
+                Object.entries(config.protocolLegend).forEach(([name, protocol]) => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protocol.color.replace('var(', '--').replace(')', '')).trim();
+
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${colorValue || protocol.color}"></div>
+                        <span>${protocol.symbol} ${name}</span>
+                    `;
+                    elements.legendGrid.appendChild(item);
+                });
+            }
+
+            /**
+             * Starts the animation for a specific flow type.
+             * @memberof NetworkAnimator
+             * @param {string} flowType - The type of authentication flow to simulate.
+             */
+            function startAnimation(flowType) {
+                stopAnimation(); // Stop any previous animation
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`${flowType}Btn`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+
+                if (flowType === 'full_topology') {
+                    isRunning = false;
+                    currentFlowType = null;
+                    Object.values(config.flows.full_topology.sequence).forEach(conn => createConnection(conn));
+                    updateStatus('FULL AUTHENTICATION TOPOLOGY (Static View)', 'var(--ready-status)');
+                    resetStats(); // Reset stats but keep static view
+                    updateStatsDisplay();
+                } else {
+                    isRunning = true;
+                    currentFlowType = flowType;
+                    currentFlowStepIndex = 0;
+                    resetStats(); // Reset all stats before starting a new dynamic flow
+                    updateStatus(config.flows[flowType].description.toUpperCase(), 'var(--active-red)'); // Simulation is active!
+                    
+                    config.flows[currentFlowType].sequence.forEach(conn => createConnection(conn));
+
+                    packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    animationFrameId = requestAnimationFrame(animatePackets);
+                }
+            }
+
+            /**
+             * Sends the next packet in the current flow's sequence.
+             * @memberof NetworkAnimator
+             */
+            function sendNextPacketInSequence() {
+                if (!isRunning || !currentFlowType || !config.flows[currentFlowType]) {
+                    return;
+                }
+
+                const flowSequence = config.flows[currentFlowType].sequence;
+
+                if (currentFlowStepIndex < flowSequence.length) {
+                    const connectionStep = flowSequence[currentFlowStepIndex];
+                    createPacket(connectionStep);
+
+                    // Update stats based on connectionStep properties
+                    if (connectionStep.authenticationStatusChange) {
+                        authenticationStatus = connectionStep.authenticationStatusChange;
+                    }
+                    if (connectionStep.protocolInUseChange) {
+                        protocolInUse = connectionStep.protocolInUseChange;
+                    }
+                    if (connectionStep.currentContextChange) {
+                        currentContext = connectionStep.currentContextChange;
+                    }
+                    if (connectionStep.passThroughHopsChange !== undefined) {
+                        passThroughHops = connectionStep.passThroughHopsChange;
+                    }
+                    if (connectionStep.lastPortUsedChange) {
+                        lastPortUsed = connectionStep.lastPortUsedChange;
+                    }
+                    if (connectionStep.isResourceAccessedChange) {
+                        isResourceAccessed = connectionStep.isResourceAccessedChange;
+                    }
+
+                    updateStatsDisplay();
+                } else {
+                    stopAnimation();
+                    updateStatus('Scenario Completed!', 'var(--ready-status)');
+                }
+            }
+
+            /**
+             * Stops all ongoing animations and clears the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function stopAnimation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (packetSendTimeoutId) {
+                    clearTimeout(packetSendTimeoutId);
+                    packetSendTimeoutId = null;
+                }
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+                activePacket = null;
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                resetStats();
+                updateStatsDisplay(); // Ensure stats display is updated to reset values
+            }
+
+            /**
+             * Resets the simulation statistics to their initial state.
+             * @memberof NetworkAnimator
+             */
+            function resetStats() {
+                authenticationStatus = config.initialAuthenticationStatus;
+                protocolInUse = config.initialProtocolInUse;
+                currentContext = config.initialCurrentContext;
+                passThroughHops = config.initialPassThroughHops;
+                lastPortUsed = config.initialLastPortUsed;
+                isResourceAccessed = config.initialIsResourceAccessed;
+                updateStatsDisplay(); // Call to update DOM
+            }
+
+            /**
+             * Updates the displayed statistics on the right sidebar.
+             * @memberof NetworkAnimator
+             */
+            function updateStatsDisplay() {
+                elements.authenticationStatus.textContent = authenticationStatus;
+                elements.protocolInUse.textContent = protocolInUse;
+                elements.currentContext.textContent = currentContext;
+                elements.passThroughHops.textContent = passThroughHops;
+                elements.lastPortUsed.textContent = lastPortUsed;
+                elements.isResourceAccessed.textContent = isResourceAccessed;
+
+                // Status Color Coding
+                let statusColor = 'var(--ready-status)';
+                if (authenticationStatus === 'Pending') statusColor = 'var(--active-orange)';
+                if (authenticationStatus.startsWith('Failed')) statusColor = 'var(--stopped-status)';
+                elements.authenticationStatus.style.color = statusColor;
+                elements.protocolInUse.style.color = protocolInUse.includes("NTLM") ? "var(--proto-ntlm)" : (protocolInUse.includes("SAML/OAuth") ? "var(--proto-https)" : (protocolInUse.includes("Kerberos") ? "var(--proto-kerberos)" : "var(--ready-status)"));
+                elements.isResourceAccessed.style.color = isResourceAccessed === "Yes" ? "var(--proto-success)" : "var(--stopped-status)";
+
+
+                if (elements.packetCount) {
+                    elements.packetCount.textContent = activePacket ? 1 : 0;
+                }
+
+                if (elements.protocolBadges) {
+                    const uniqueProtocols = new Set();
+                    if (activePacket) {
+                        uniqueProtocols.add(activePacket.connection.protocol);
+                    }
+                    elements.protocolBadges.innerHTML = Array.from(uniqueProtocols).map(protocolName => {
+                        const protoConfig = config.protocolLegend[protocolName];
+                        if (protoConfig) {
+                            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protoConfig.color.replace('var(', '--').replace(')', '')).trim();
+                            return `<span class="protocol-badge" style="background: ${colorValue || protoConfig.color};">${protoConfig.symbol} ${protocolName}</span>`;
+                        }
+                        return '';
+                    }).join('');
+                }
+            }
+
+
+            /**
+             * Creates a visual connection line between two devices.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object (from, to, protocol, color).
+             */
+            function createConnection(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Missing device for connection: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const fromX = fromDevice.x + config.deviceWidth / 2;
+                const fromY = fromDevice.y + config.deviceHeight / 2;
+                const toX = toDevice.x + config.deviceWidth / 2;
+                const toY = toDevice.y + config.deviceHeight / 2;
+
+                const dx = toX - fromX;
+                const dy = toY - fromY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                const connectionEl = document.createElement('div');
+                connectionEl.className = 'connection';
+                connectionEl.style.left = `${fromX}px`;
+                connectionEl.style.top = `${fromY}px`;
+                connectionEl.style.width = `${length}px`;
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                connectionEl.style.background = colorValue || connection.color;
+                connectionEl.style.transform = `rotate(${angle}deg)`;
+
+                connectionEl.innerHTML = `
+                    <span class="connection-label" style="background: ${colorValue || connection.color}E6;">
+                        ${connection.protocol}
+                    </span>
+                `;
+
+                elements.networkCanvas.appendChild(connectionEl);
+            }
+
+            /**
+             * Creates an animated packet element and sets it as the active packet.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object for the packet's path.
+             */
+            function createPacket(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Cannot create packet, missing device: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const packetEl = document.createElement('div');
+                packetEl.className = 'packet';
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                packetEl.style.background = colorValue || connection.color;
+                packetEl.textContent = connection.packet;
+
+                elements.networkCanvas.appendChild(packetEl);
+
+                const offsetX = config.deviceWidth / 2 - config.packetSize / 2;
+                const offsetY = config.deviceHeight / 2 - config.packetSize / 2;
+
+                activePacket = {
+                    connection: connection,
+                    element: packetEl,
+                    progress: 0,
+                    fromPos: { x: fromDevice.x + offsetX, y: fromDevice.y + offsetY },
+                    toPos: { x: toDevice.x + offsetX, y: toDevice.y + offsetY }
+                };
+            }
+
+            /**
+             * The main animation loop for packets, called via requestAnimationFrame.
+             * @memberof NetworkAnimator
+             */
+            function animatePackets() {
+                if (!isRunning) {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    return;
+                }
+
+                if (activePacket) {
+                    activePacket.progress += 0.003 * config.animationSpeed;
+
+                    if (activePacket.progress >= 1) {
+                        activePacket.element.remove();
+                        activePacket = null;
+                        currentFlowStepIndex++;
+                        
+                        packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    } else {
+                        const x = activePacket.fromPos.x + (activePacket.toPos.x - activePacket.fromPos.x) * activePacket.progress;
+                        const y = activePacket.fromPos.y + (activePacket.toPos.y - activePacket.fromPos.y) * activePacket.progress;
+
+                        activePacket.element.style.left = `${x}px`;
+                        activePacket.element.style.top = `${y}px`;
+                    }
+                }
+
+                updateStatsDisplay();
+                animationFrameId = requestAnimationFrame(animatePackets);
+            }
+
+            /**
+             * Updates the status message displayed on the page.
+             * @memberof NetworkAnimator
+             * @param {string} message - The status message to display.
+             * @param {string} [color] - Optional, a CSS color string for the status text.
+             */
+            function updateStatus(message, color = 'var(--ready-status)') {
+                if (elements.status) {
+                    elements.status.textContent = message;
+                    elements.status.style.color = color;
+                }
+            }
+
+            /**
+             * Exports the current network configuration and flow steps to a CSV file.
+             * @memberof NetworkAnimator
+             */
+            function exportToCSV() {
+                const csvRows = [];
+                csvRows.push('Type,ID,Name,Symbol/Packet,X,Y,Color,Protocol,From,To,FlowStep,AuthenticationStatusChange,ProtocolInUseChange,CurrentContextChange,PassThroughHopsChange,LastPortUsedChange,IsResourceAccessedChange');
+
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    csvRows.push(`Device,${id},${device.name},${device.symbol},${device.x},${device.y},${colorValue || device.color},,-,,,,,,`);
+                });
+
+                Object.entries(config.flows).forEach(([flowId, flow]) => {
+                    if (flowId === 'full_topology') return; 
+
+                    flow.sequence.forEach((conn, index) => {
+                        const colorValue = getComputedStyle(document.documentElement).getPropertyValue(conn.color.replace('var(', '--').replace(')', '')).trim();
+                        csvRows.push(`Flow Step,,${flowId} - Step ${index + 1},${conn.packet},,,,${colorValue || conn.color},${conn.protocol},${conn.from},${conn.to},${index + 1},` +
+                            `${conn.authenticationStatusChange || ''},${conn.protocolInUseChange || ''},${conn.currentContextChange || ''},${conn.passThroughHopsChange !== undefined ? conn.passThroughHopsChange : ''},` +
+                            `${conn.lastPortUsedChange || ''},${conn.isResourceAccessedChange || ''}`);
+                    });
+                });
+
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ad_adfs_auth_simulation_data_v2.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('AD & ADFS Authentication simulation data exported to CSV successfully!');
+            }
+
+            /**
+             * Handles keyboard input for animation controls.
+             * @memberof NetworkAnimator
+             * @param {KeyboardEvent} e - The keyboard event object.
+             */
+            function handleKeyDown(e) {
+                switch(e.key) {
+                    case '1': NetworkAnimator.startAnimation('ntlm_same_child_domain'); break;
+                    case '2': NetworkAnimator.startAnimation('ntlm_parent_user_child_resource'); break;
+                    case '3': NetworkAnimator.startAnimation('ntlm_cross_forest'); break;
+                    case '4': NetworkAnimator.startAnimation('adfs_internal_access'); break;
+                    case '5': NetworkAnimator.startAnimation('adfs_external_access'); break;
+                    case '6': NetworkAnimator.startAnimation('full_topology'); break;
+                    case ' ': e.preventDefault(); NetworkAnimator.stopAnimation(); break;
+                    case 'e': e.preventDefault(); NetworkAnimator.exportToCSV(); break;
+                }
+            }
+
+            // --- Public API ---
+            return {
+                initialize: initializeNetwork,
+                startAnimation: startAnimation,
+                stopAnimation: stopAnimation,
+                exportToCSV: exportToCSV,
+                handleKeyDown: handleKeyDown
+            };
+
+        })();
+
+        window.addEventListener('load', NetworkAnimator.initialize);
+        document.addEventListener('keydown', NetworkAnimator.handleKeyDown);
+
+    </script>
+</body>
+</html>
