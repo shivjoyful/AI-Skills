@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITIL 5 Domains & Offshoring Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Theme Colors */
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --header-bg: rgba(255, 255, 255, 0.1);
+            --canvas-bg: rgba(255, 255, 255, 0.05);
+            --canvas-border: rgba(255, 255, 255, 0.1);
+            --text-light: #fff;
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --active-red: #ff6b6b;
+            --active-orange: #ee5a24;
+            --stopped-status: #e74c3c;
+            --ready-status: #4CAF50;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+
+            /* Device/Entity Colors */
+            --color-business: #3f51b5; /* Indigo */
+            --color-strategy: #9c27b0; /* Purple */
+            --color-finance: #4caf50; /* Green */
+            --color-portfolio: #ff9800; /* Orange */
+
+            --color-design: #2196f3; /* Blue */
+            --color-transition: #ffc107; /* Amber */
+            --color-csi: #00bcd4; /* Cyan */
+            --color-service-owner: #e91e63; /* Pink */
+
+            --color-onshore-ops: #795548; /* Brown */
+            --color-onshore-sme: #607d8b; /* Blue Grey */
+
+            --color-offshore-mgr: #00897b; /* Teal */
+            --color-offshore-team: #43a047; /* Dark Green */
+
+            --color-itsm: #1e88e5; /* Light Blue */
+            --color-kb: #ffeb3b; /* Yellow */
+            --color-monitoring: #f44336; /* Red */
+            --color-catalogue: #7b1fa2; /* Deep Purple */
+            --color-user: #e91e63; /* Pink for users generating requests */
+
+            /* Protocol/Action Colors (ITIL Specific) */
+            --proto-strategy: #9c27b0;
+            --proto-design: #2196f3;
+            --proto-transition: #ffc107;
+            --proto-operation: #43a047;
+            --proto-csi: #00bcd4;
+            --proto-business: #3f51b5;
+            --proto-itsm: #1e88e5;
+            --proto-knowledge: #ffeb3b;
+            --proto-feedback: #f44336;
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars due to animations */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 2000px; /* Wider to accommodate sidebars + canvas */
+            margin: 20px auto;
+            padding: 0 20px; /* Adjust padding for sidebars */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: var(--header-bg);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, var(--active-red) 0%, var(--active-orange) 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn.active:hover {
+            box-shadow: 0 12px 30px rgba(255, 107, 107, 0.8);
+        }
+
+        /* Main Content Area (canvas and sidebars) */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+            position: relative; /* For proper positioning of sticky sidebars */
+        }
+
+        /* Sidebars */
+        .left-sidebar, .right-sidebar {
+            width: 250px;
+            min-width: 250px; /* Fixed width for sidebars */
+            max-height: calc(100vh - 40px); /* Limit height to viewport, considering body padding */
+            overflow-y: auto; /* Scroll if content overflows */
+            background: var(--sidebar-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: sticky; /* Sticky positioning within .main-content */
+            top: 20px; /* Distance from top of viewport */
+        }
+
+        .left-sidebar {
+            order: 1; /* Left side */
+        }
+
+        .right-sidebar {
+            order: 3; /* Right side */
+        }
+
+        /* Legend within Left Sidebar */
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column initially */
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Stats within Right Sidebar */
+        .stats h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .stats div:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .status-text {
+            color: var(--ready-status);
+            font-weight: bold;
+        }
+        .protocol-badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: flex-end; /* Align badges to the right */
+        }
+        .protocol-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+
+        /* Network Canvas */
+        .network-canvas {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            height: 980px; /* Increased height for more swimlanes */
+            background: var(--canvas-bg);
+            border: 2px solid var(--canvas-border);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            order: 2; /* Middle position */
+        }
+
+        /* Swimlane Styles */
+        .swimlane {
+            position: absolute;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .swimlane-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--bg-darker);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        /* Specific Swimlane Positioning within the canvas */
+        /* All swimlanes made very wide to spread out devices and labels */
+        #business-strategy-swimlane { top: 20px; left: 20px; width: 1600px; height: 100px; }
+        #it-management-swimlane { top: 135px; left: 20px; width: 1600px; height: 100px; } /* 20 + 100 + 15 = 135 */
+        #onshore-ops-swimlane { top: 250px; left: 20px; width: 1600px; height: 100px; } /* 135 + 100 + 15 = 250 */
+        #offshore-delivery-swimlane { top: 365px; left: 20px; width: 1600px; height: 100px; } /* 250 + 100 + 15 = 365 */
+        #shared-systems-itsm { top: 480px; left: 20px; width: 1600px; height: 100px; } /* 365 + 100 + 15 = 480 */
+        #users-monitoring-swimlane { top: 595px; left: 20px; width: 1600px; height: 100px; } /* 480 + 100 + 15 = 595 */
+
+        /* Positioning for additional swimlanes to maintain spacing, if needed. For ITIL, 5 main ones + shared + users is good */
+        /* If we used 5 domains as swimlanes, plus onshore/offshore/shared, it'd be too many */
+        /* The current structure groups by organization/type and implicitly covers ITIL domains through flows */
+
+
+        /* Device Styles */
+        .device {
+            position: absolute;
+            width: 100px; /* Standardized small width */
+            height: 50px; /* Standardized small height */
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .device:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            z-index: 11;
+        }
+
+        .device-icon {
+            font-size: 20px; /* Standardized small font size */
+            margin-bottom: 3px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .device-name {
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Connection Styles */
+        .connection {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            height: 2px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+            z-index: 5; /* Ensure connections are below labels */
+        }
+
+        .connection-label {
+            position: absolute;
+            left: 50%;
+            top: -20px; /* Position above the line */
+            transform: translateX(-50%);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            color: var(--text-light);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.8); /* Stronger background for readability */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 25; /* CRITICAL: Ensure labels are on top of everything else */
+        }
+
+        /* Packet Styles */
+        .packet {
+            position: absolute;
+            width: 20px; /* Standardized small width */
+            height: 20px; /* Standardized small height */
+            border-radius: 50%;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 15;
+            animation: pulse 1.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1800px) {
+            .container { max-width: 98%; padding: 0 10px; }
+            .left-sidebar, .right-sidebar { width: 220px; min-width: 220px; }
+            .network-canvas { height: 880px; } /* Adjusted height for 6 swimlanes */
+
+            /* Scale swimlanes */
+            #business-strategy-swimlane, #it-management-swimlane, #onshore-ops-swimlane,
+            #offshore-delivery-swimlane, #shared-systems-itsm, #users-monitoring-swimlane {
+                width: 1200px; /* Reduced width */
+                height: 110px; /* Slightly taller for smaller screens, with 10px gap */
+            }
+
+            /* Adjust top positions */
+            #business-strategy-swimlane { top: 20px; left: 20px; }
+            #it-management-swimlane { top: 140px; left: 20px; } /* 20 + 110 + 10 = 140 */
+            #onshore-ops-swimlane { top: 260px; left: 20px; } /* 140 + 110 + 10 = 260 */
+            #offshore-delivery-swimlane { top: 380px; left: 20px; } /* 260 + 110 + 10 = 380 */
+            #shared-systems-itsm { top: 500px; left: 20px; } /* 380 + 110 + 10 = 500 */
+            #users-monitoring-swimlane { top: 620px; left: 20px; } /* 500 + 110 + 10 = 620 */
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (110 - 50) / 2 = swimlane.top + 30 */
+            #business_leadership { x: 50px; y: 50px; } /* 20 + 30 */
+            #it_strategy_team { x: 300px; y: 50px; }
+            #finance_dept { x: 550px; y: 50px; }
+            #service_portfolio { x: 800px; y: 50px; }
+
+            #service_design_lead { x: 50px; y: 170px; } /* 140 + 30 */
+            #service_transition_manager { x: 300px; y: 170px; }
+            #csi_manager { x: 550px; y: 170px; }
+            #onshore_service_owner { x: 800px; y: 170px; }
+
+            #onshore_it_ops { x: 50px; y: 290px; } /* 260 + 30 */
+            #onshore_subject_matter_expert { x: 300px; y: 290px; }
+
+            #offshore_delivery_manager { x: 50px; y: 410px; } /* 380 + 30 */
+            #offshore_it_team { x: 300px; y: 410px; }
+
+            #itsm_system { x: 50px; y: 530px; } /* 500 + 30 */
+            #knowledge_base { x: 300px; y: 530px; }
+            #monitoring_system { x: 550px; y: 530px; }
+            #service_catalogue { x: 800px; y: 530px; }
+
+            #affected_user_base { x: 50px; y: 650px; } /* 620 + 30 */
+
+        }
+
+        @media (max-width: 1400px) {
+            .left-sidebar, .right-sidebar { width: 180px; min-width: 180px; }
+            .network-canvas { height: 750px; } /* Further reduced canvas height */
+
+            #business-strategy-swimlane, #it-management-swimlane, #onshore-ops-swimlane,
+            #offshore-delivery-swimlane, #shared-systems-itsm, #users-monitoring-swimlane {
+                width: 800px; /* Further reduced width */
+                height: 100px; /* Back to 100px height with 10px gaps for this breakpoint */
+            }
+
+            /* Adjust top positions */
+            #business-strategy-swimlane { top: 20px; left: 20px; }
+            #it-management-swimlane { top: 130px; left: 20px; } /* 20 + 100 + 10 = 130 */
+            #onshore-ops-swimlane { top: 240px; left: 20px; } /* 130 + 100 + 10 = 240 */
+            #offshore-delivery-swimlane { top: 350px; left: 20px; } /* 240 + 100 + 10 = 350 */
+            #shared-systems-itsm { top: 460px; left: 20px; } /* 350 + 100 + 10 = 460 */
+            #users-monitoring-swimlane { top: 570px; left: 20px; } /* 460 + 100 + 10 = 570 */
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (100 - 50) / 2 = swimlane.top + 25 */
+            #business_leadership { x: 40px; y: 45px; } /* 20 + 25 */
+            #it_strategy_team { x: 200px; y: 45px; }
+            #finance_dept { x: 360px; y: 45px; }
+            #service_portfolio { x: 520px; y: 45px; }
+
+            #service_design_lead { x: 40px; y: 155px; } /* 130 + 25 */
+            #service_transition_manager { x: 200px; y: 155px; }
+            #csi_manager { x: 360px; y: 155px; }
+            #onshore_service_owner { x: 520px; y: 155px; }
+
+            #onshore_it_ops { x: 40px; y: 265px; } /* 240 + 25 */
+            #onshore_subject_matter_expert { x: 200px; y: 265px; }
+
+            #offshore_delivery_manager { x: 40px; y: 375px; } /* 350 + 25 */
+            #offshore_it_team { x: 200px; y: 375px; }
+
+            #itsm_system { x: 40px; y: 485px; } /* 460 + 25 */
+            #knowledge_base { x: 200px; y: 485px; }
+            #monitoring_system { x: 360px; y: 485px; }
+            #service_catalogue { x: 520px; y: 485px; }
+
+            #affected_user_base { x: 40px; y: 595px; } /* 570 + 25 */
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column; /* Stack sidebars and canvas */
+                gap: 15px;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%; /* Full width when stacked */
+                position: static; /* Remove sticky behavior */
+                max-height: 200px; /* Limit height when stacked */
+                padding: 10px;
+            }
+            .right-sidebar { order: 1; } /* Stats on top when stacked */
+            .left-sidebar { order: 3; } /* Legend on bottom when stacked */
+            .network-canvas {
+                order: 2; /* Canvas in middle */
+                height: 550px; /* Reduce canvas height */
+            }
+
+            /* Adjust swimlanes for smaller canvas */
+            .swimlane {
+                position: relative; /* Make them flow naturally within canvas */
+                top: auto; left: auto;
+                width: calc(100% - 40px); /* Full width minus padding */
+                height: auto;
+                margin: 10px auto; /* Center them */
+                padding: 10px;
+            }
+            .swimlane-label { top: -12px; left: 10px; font-size: 0.9em; padding: 3px 10px; }
+
+            /* Adjust devices within stacked swimlanes */
+            .device {
+                position: relative;
+                top: auto; left: auto;
+                margin: 10px auto; /* Center devices within swimlane */
+                display: flex;
+            }
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columns on wider small screens */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .header p { font-size: 0.9em; }
+            .controls { gap: 8px; }
+            .btn { padding: 8px 15px; font-size: 0.8em; }
+            .network-canvas { height: 450px; }
+            .device { width: 90px; height: 45px; }
+            .device-icon { font-size: 18px; }
+            .device-name { font-size: 9px; }
+            .legend-grid {
+                grid-template-columns: 1fr; /* Single column on very small screens */
+            }
+            .protocol-badges-container { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 ITIL 5 Domains Simulation: Onshore to Offshore Transition 🤝</h1>
+            <p>Understanding the Flow: Strategy, Design, Transition, Operation, and CSI</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="itil_strategy_flowBtn" onclick="NetworkAnimator.startAnimation('itil_strategy_flow')" aria-label="Simulate Service Strategy">⭐ Strategy</button>
+            <button class="btn" id="itil_design_flowBtn" onclick="NetworkAnimator.startAnimation('itil_design_flow')" aria-label="Simulate Service Design">📐 Design</button>
+            <button class="btn" id="itil_transition_flowBtn" onclick="NetworkAnimator.startAnimation('itil_transition_flow')" aria-label="Simulate Service Transition">🚧 Transition</button>
+            <button class="btn" id="itil_operation_flowBtn" onclick="NetworkAnimator.startAnimation('itil_operation_flow')" aria-label="Simulate Service Operation">⚙️ Operation</button>
+            <button class="btn" id="itil_csi_flowBtn" onclick="NetworkAnimator.startAnimation('itil_csi_flow')" aria-label="Simulate Continual Service Improvement">📈 CSI</button>
+            <button class="btn" id="unified_offshoring_projectBtn" onclick="NetworkAnimator.startAnimation('unified_offshoring_project')" aria-label="Simulate Unified Offshoring Project">🚀 Unified Offshoring</button>
+            <button class="btn" id="full_topologyBtn" onclick="NetworkAnimator.startAnimation('full_topology')" aria-label="Show Full Topology">🗺️ Full Topology</button>
+            <button class="btn" id="stopBtn" onclick="NetworkAnimator.stopAnimation()" aria-label="Stop Animation">⏹️ Stop</button>
+            <button class="btn" id="exportBtn" onclick="NetworkAnimator.exportToCSV()" aria-label="Export to CSV">💾 Export CSV</button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="legend" id="legend">
+                    <h3>Protocol/Action Legend</h3>
+                    <div class="legend-grid">
+                        <!-- Legend items will be created dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-canvas" id="networkCanvas">
+                <!-- Swimlanes -->
+                <div id="business-strategy-swimlane" class="swimlane">
+                    <span class="swimlane-label">Business & Strategy (Onshore)</span>
+                </div>
+                <div id="it-management-swimlane" class="swimlane">
+                    <span class="swimlane-label">IT Management (Onshore)</span>
+                </div>
+                <div id="onshore-ops-swimlane" class="swimlane">
+                    <span class="swimlane-label">Onshore Operational Teams</span>
+                </div>
+                <div id="offshore-delivery-swimlane" class="swimlane">
+                    <span class="swimlane-label">Offshore Service Delivery</span>
+                </div>
+                <div id="shared-systems-itsm" class="swimlane">
+                    <span class="swimlane-label">Shared Resources & Systems</span>
+                </div>
+                <div id="users-monitoring-swimlane" class="swimlane">
+                    <span class="swimlane-label">Users & Monitoring</span>
+                </div>
+
+                <!-- Devices and connections will be created dynamically -->
+            </div>
+
+            <div class="right-sidebar">
+                <div class="stats" id="stats">
+                    <h3>Simulation Stats</h3>
+                    <div>Users Served by Offshore: <span id="usersServedByOffshore">0</span></div>
+                    <div>Active Packets: <span id="packetCount">0</span></div>
+                    <div>Current Status: <span id="status" class="status-text">Ready</span></div>
+                    <div>Active Protocols:</div>
+                    <div id="protocolBadges" class="protocol-badges-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @namespace NetworkAnimator
+         * @description Manages the network animation and visualization for ITIL 5 Domains & Offshoring simulation.
+         */
+        const NetworkAnimator = (() => {
+            // --- Configuration ---
+            const config = {
+                devices: {
+                    // Business & Strategy (Onshore)
+                    business_leadership: { symbol: "💼", name: "Business Leadership", x: 80, y: 45, color: "var(--color-business)", type: "Stakeholder" },
+                    it_strategy_team: { symbol: "🎯", name: "IT Strategy Team", x: 350, y: 45, color: "var(--color-strategy)", type: "Team" },
+                    finance_dept: { symbol: "💰", name: "Finance Dept.", x: 620, y: 45, color: "var(--color-finance)", type: "Department" },
+                    service_portfolio: { symbol: "📜", name: "Service Portfolio", x: 890, y: 45, color: "var(--color-portfolio)", type: "System" },
+
+                    // IT Management (Onshore)
+                    service_design_lead: { symbol: "📐", name: "Service Design Lead", x: 80, y: 160, color: "var(--color-design)", type: "Role" },
+                    service_transition_manager: { symbol: "🚧", name: "Service Transition Mgr", x: 350, y: 160, color: "var(--color-transition)", type: "Role" },
+                    csi_manager: { symbol: "📈", name: "CSI Manager", x: 620, y: 160, color: "var(--color-csi)", type: "Role" },
+                    onshore_service_owner: { symbol: "👑", name: "Onshore Service Owner", x: 890, y: 160, color: "var(--color-service-owner)", type: "Role" },
+
+                    // Onshore Operational Teams
+                    onshore_it_ops: { symbol: "👨‍🏭", name: "Onshore IT Ops", x: 80, y: 275, color: "var(--color-onshore-ops)", type: "Team" },
+                    onshore_subject_matter_expert: { symbol: "🧠", name: "Onshore SME", x: 350, y: 275, color: "var(--color-onshore-sme)", type: "Team" },
+
+                    // Offshore Service Delivery
+                    offshore_delivery_manager: { symbol: "🧑‍💼", name: "Offshore Delivery Mgr", x: 80, y: 390, color: "var(--color-offshore-mgr)", type: "Role" },
+                    offshore_it_team: { symbol: "👩‍💻", name: "Offshore IT Team", x: 350, y: 390, color: "var(--color-offshore-team)", type: "Team" },
+
+                    // Shared Resources & Systems
+                    itsm_system: { symbol: "🎫", name: "ITSM System", x: 80, y: 505, color: "var(--color-itsm)", type: "System" },
+                    knowledge_base: { symbol: "📚", name: "Knowledge Base", x: 350, y: 505, color: "var(--color-kb)", type: "System" },
+                    monitoring_system: { symbol: "📊", name: "Monitoring System", x: 620, y: 505, color: "var(--color-monitoring)", type: "System" },
+                    service_catalogue: { symbol: "🛒", name: "Service Catalogue", x: 890, y: 505, color: "var(--color-catalogue)", type: "System" },
+
+                    // Users & Monitoring
+                    affected_user_base: { symbol: "🧑‍💻", name: "User Base", x: 80, y: 620, color: "var(--color-user)", type: "User" },
+                },
+                flows: {
+                    full_topology: {
+                        description: "Full ITIL Offshoring Topology (Static View)",
+                        sequence: [
+                            { from: "business_leadership", to: "it_strategy_team", protocol: "Strategic Alignment", color: "var(--proto-business)", packet: "🔗" },
+                            { from: "it_strategy_team", to: "service_portfolio", protocol: "Portfolio Update", color: "var(--proto-strategy)", packet: "📝" },
+                            { from: "service_portfolio", to: "onshore_service_owner", protocol: "Service Definition", color: "var(--proto-portfolio)", packet: "📄" },
+
+                            { from: "onshore_service_owner", to: "service_design_lead", protocol: "Design Mandate", color: "var(--proto-design)", packet: "📐" },
+                            { from: "service_design_lead", to: "service_transition_manager", protocol: "Design Handoff", color: "var(--proto-design)", packet: "🚧" },
+                            { from: "service_transition_manager", to: "csi_manager", protocol: "CSI Input", color: "var(--proto-transition)", packet: "📈" },
+
+                            { from: "onshore_it_ops", to: "onshore_subject_matter_expert", protocol: "Knowledge Capture", color: "var(--proto-knowledge)", packet: "📚" },
+                            { from: "onshore_subject_matter_expert", to: "knowledge_base", protocol: "Document Knowledge", color: "var(--proto-knowledge)", packet: "⬆️" },
+
+                            { from: "offshore_delivery_manager", to: "offshore_it_team", protocol: "Team Oversight", color: "var(--proto-offshore-mgr)", packet: "🧑‍💼" },
+                            { from: "offshore_it_team", to: "itsm_system", protocol: "Service Interaction", color: "var(--proto-itsm)", packet: "🎫" },
+                            { from: "offshore_it_team", to: "knowledge_base", protocol: "Consult KB", color: "var(--proto-knowledge)", packet: "🔎" },
+
+                            { from: "affected_user_base", to: "service_catalogue", protocol: "User Request", color: "var(--proto-operation)", packet: "🛒" },
+                            { from: "service_catalogue", to: "itsm_system", protocol: "Ticket Creation", color: "var(--proto-itsm)", packet: "🎫" },
+                            { from: "monitoring_system", to: "itsm_system", protocol: "Incident Alert", color: "var(--proto-monitoring)", packet: "🔔" },
+                            { from: "itsm_system", to: "offshore_it_team", protocol: "Assign Ticket", color: "var(--proto-itsm)", packet: "➡️" },
+
+                            { from: "csi_manager", to: "onshore_service_owner", protocol: "Performance Review", color: "var(--proto-csi)", packet: "📊" },
+                            { from: "onshore_service_owner", to: "itsm_system", protocol: "Improvement Plan", color: "var(--proto-itsm)", packet: "💡" },
+                        ]
+                    },
+                    itil_strategy_flow: {
+                        description: "ITIL Service Strategy: Decision to Offshore",
+                        sequence: [
+                            { from: "business_leadership", to: "it_strategy_team", protocol: "Inquiry: Offshore Feasibility?", color: "var(--proto-strategy)", packet: "❓" },
+                            { from: "it_strategy_team", to: "finance_dept", protocol: "Request Cost-Benefit Analysis", color: "var(--proto-strategy)", packet: "📊" },
+                            { from: "finance_dept", to: "it_strategy_team", protocol: "CBA Report (Positive ROI)", color: "var(--proto-strategy)", packet: "✅" },
+                            { from: "it_strategy_team", to: "service_portfolio", protocol: "Update Service Strategy (Offshoring Approved)", color: "var(--proto-strategy)", packet: "📝" },
+                            { from: "service_portfolio", to: "business_leadership", protocol: "Strategic Decision: Go Offshore!", color: "var(--proto-strategy)", packet: "🚀" }
+                        ]
+                    },
+                    itil_design_flow: {
+                        description: "ITIL Service Design: Designing Offshore Delivery",
+                        sequence: [
+                            { from: "it_strategy_team", to: "service_design_lead", protocol: "Design Mandate: Offshore Services", color: "var(--proto-design)", packet: "📐" },
+                            { from: "service_design_lead", to: "offshore_delivery_manager", protocol: "Request Offshore Capabilities", color: "var(--proto-design)", packet: "🤝" },
+                            { from: "offshore_delivery_manager", to: "service_design_lead", protocol: "Offshore Capability Profile", color: "var(--proto-design)", packet: "📄" },
+                            { from: "service_design_lead", to: "knowledge_base", protocol: "Design KT Plan & Doc. Standards", color: "var(--proto-design)", packet: "📚" },
+                            { from: "service_design_lead", to: "itsm_system", protocol: "Design New Offshore Processes", color: "var(--proto-design)", packet: "⚙️" },
+                            { from: "service_design_lead", to: "onshore_service_owner", protocol: "Review New OLA/SLA with Offshore", color: "var(--proto-design)", packet: "📝" }
+                        ]
+                    },
+                    itil_transition_flow: {
+                        description: "ITIL Service Transition: Migrating Services to Offshore",
+                        sequence: [
+                            { from: "service_design_lead", to: "service_transition_manager", protocol: "Design Handoff for Transition", color: "var(--proto-transition)", packet: "🚧" },
+                            { from: "service_transition_manager", to: "onshore_subject_matter_expert", protocol: "Initiate Knowledge Transfer", color: "var(--proto-transition)", packet: "🧠" },
+                            { from: "onshore_subject_matter_expert", to: "offshore_it_team", protocol: "KT Session (Process Training)", color: "var(--proto-transition)", packet: "🎓" },
+                            { from: "offshore_it_team", to: "knowledge_base", protocol: "Update Offshore-Specific Docs", color: "var(--proto-transition)", packet: "⬆️📚" },
+                            { from: "offshore_it_team", to: "itsm_system", protocol: "Configure Offshore Team in ITSM", color: "var(--proto-transition)", packet: "⚙️" },
+                            { from: "service_transition_manager", to: "onshore_it_ops", protocol: "Conduct Parallel Run/Shadowing", color: "var(--proto-transition)", packet: "👥" },
+                            { from: "onshore_it_ops", to: "offshore_it_team", protocol: "Formal Handover (Service Cutover)", color: "var(--proto-transition)", packet: "➡️" },
+                            { from: "offshore_it_team", to: "onshore_service_owner", protocol: "Service Now Live Offshore", color: "var(--proto-transition)", packet: "✅", usersServedIncrease: 1000 }
+                        ]
+                    },
+                    itil_operation_flow: {
+                        description: "ITIL Service Operation: Offshore Team in Action",
+                        sequence: [
+                            { from: "affected_user_base", to: "service_catalogue", protocol: "User Submits Service Request", color: "var(--proto-operation)", packet: "🛒" },
+                            { from: "service_catalogue", to: "itsm_system", protocol: "Create Request Ticket", color: "var(--proto-itsm)", packet: "🎫" },
+                            { from: "itsm_system", to: "offshore_it_team", protocol: "Assign Request to Offshore", color: "var(--proto-operation)", packet: "➡️" },
+                            { from: "offshore_it_team", to: "itsm_system", protocol: "Request Fulfilled", color: "var(--proto-operation)", packet: "✅" },
+                            { from: "monitoring_system", to: "itsm_system", protocol: "Automated Incident Alert", color: "var(--proto-monitoring)", packet: "🔔" },
+                            { from: "itsm_system", to: "offshore_it_team", protocol: "Assign Incident to Offshore", color: "var(--proto-operation)", packet: "➡️" },
+                            { from: "offshore_it_team", to: "itsm_system", protocol: "Incident Resolved", color: "var(--proto-operation)", packet: "✔️" },
+                            { from: "offshore_it_team", to: "affected_user_base", protocol: "User Service Restored", color: "var(--proto-operation)", packet: "😊", usersServedIncrease: 0 } /* No further increase, just showing service */
+                        ]
+                    },
+                    itil_csi_flow: {
+                        description: "ITIL Continual Service Improvement: Optimizing Offshore Services",
+                        sequence: [
+                            { from: "onshore_service_owner", to: "csi_manager", protocol: "Request Offshore Performance Review", color: "var(--proto-csi)", packet: "📊" },
+                            { from: "csi_manager", to: "offshore_delivery_manager", protocol: "Gather Performance Data (SLAs)", color: "var(--proto-csi)", packet: "📈" },
+                            { from: "offshore_delivery_manager", to: "csi_manager", protocol: "Offshore Performance Report", color: "var(--proto-csi)", packet: "📄" },
+                            { from: "csi_manager", to: "itsm_system", protocol: "Identify Problem Trends from Incidents", color: "var(--proto-csi)", packet: "🔍" },
+                            { from: "csi_manager", to: "onshore_service_owner", protocol: "Propose Process Improvement", color: "var(--proto-csi)", packet: "💡" },
+                            { from: "onshore_service_owner", to: "itsm_system", protocol: "Implement Change for Improvement", color: "var(--proto-csi)", packet: "🔄" },
+                            { from: "itsm_system", to: "offshore_it_team", protocol: "New Optimized Process", color: "var(--proto-csi)", packet: "✨" }
+                        ]
+                    },
+                    unified_offshoring_project: {
+                        description: "End-to-End Unified Offshoring Project Lifecycle",
+                        sequence: [
+                            // --- Service Strategy ---
+                            { from: "business_leadership", to: "it_strategy_team", protocol: "Strategic Mandate: Offshoring", color: "var(--proto-strategy)", packet: "🚀" },
+                            { from: "it_strategy_team", to: "finance_dept", protocol: "CBA Request", color: "var(--proto-strategy)", packet: "📊" },
+                            { from: "finance_dept", to: "it_strategy_team", protocol: "CBA Approved", color: "var(--proto-strategy)", packet: "✅" },
+                            { from: "it_strategy_team", to: "service_portfolio", protocol: "Offshoring Initiative Added", color: "var(--proto-strategy)", packet: "📝" },
+
+                            // --- Service Design ---
+                            { from: "service_portfolio", to: "service_design_lead", protocol: "New Service Design Brief", color: "var(--proto-design)", packet: "📐" },
+                            { from: "service_design_lead", to: "offshore_delivery_manager", protocol: "Gather Offshore Requirements", color: "var(--proto-design)", packet: "🤝" },
+                            { from: "offshore_delivery_manager", to: "service_design_lead", protocol: "Offshore Capabilities Defined", color: "var(--proto-design)", packet: "📄" },
+                            { from: "service_design_lead", to: "knowledge_base", protocol: "Design KT & Doc. Strategy", color: "var(--proto-design)", packet: "📚" },
+                            { from: "service_design_lead", to: "itsm_system", protocol: "Design Offshore Processes (ITSM)", color: "var(--proto-design)", packet: "⚙️" },
+                            { from: "service_design_lead", to: "onshore_service_owner", protocol: "Draft SLA/OLA for Offshore", color: "var(--proto-design)", packet: "📜" },
+
+                            // --- Service Transition ---
+                            { from: "service_design_lead", to: "service_transition_manager", protocol: "Design Handoff for Build/Test", color: "var(--proto-transition)", packet: "🚧" },
+                            { from: "service_transition_manager", to: "onshore_subject_matter_expert", protocol: "Initiate Knowledge Capture", color: "var(--proto-transition)", packet: "🧠" },
+                            { from: "onshore_subject_matter_expert", to: "offshore_it_team", protocol: "Execute KT Sessions (Phase 1)", color: "var(--proto-transition)", packet: "🎓", usersServedIncrease: 500 },
+                            { from: "offshore_it_team", to: "knowledge_base", protocol: "Populate Offshore KB", color: "var(--proto-transition)", packet: "⬆️📚" },
+                            { from: "service_transition_manager", to: "onshore_it_ops", protocol: "Start Parallel Run / Shadowing", color: "var(--proto-transition)", packet: "👥", usersServedIncrease: 500 },
+                            { from: "onshore_it_ops", to: "offshore_it_team", protocol: "Formal Handover (Services Cutover)", color: "var(--proto-transition)", packet: "➡️", usersServedIncrease: 1000 },
+                            { from: "offshore_it_team", to: "onshore_service_owner", protocol: "Offshore Team Live & Active", color: "var(--proto-transition)", packet: "✅", usersServedIncrease: 1000 },
+
+                            // --- Service Operation (simplified demonstration of ongoing ops) ---
+                            { from: "affected_user_base", to: "service_catalogue", protocol: "User Request to Offshore", color: "var(--proto-operation)", packet: "🛒" },
+                            { from: "service_catalogue", to: "itsm_system", protocol: "Offshore Ticket Created", color: "var(--proto-itsm)", packet: "🎫" },
+                            { from: "itsm_system", to: "offshore_it_team", protocol: "Offshore Team Resolves Request", color: "var(--proto-operation)", packet: "✔️", usersServedIncrease: 1000 },
+                            { from: "monitoring_system", to: "itsm_system", protocol: "Alert (handled by Offshore)", color: "var(--proto-monitoring)", packet: "🔔" },
+                            { from: "itsm_system", to: "offshore_it_team", protocol: "Offshore Team Resolves Incident", color: "var(--proto-operation)", packet: "✔️", usersServedIncrease: 1000 },
+
+                            // --- Continual Service Improvement ---
+                            { from: "onshore_service_owner", to: "csi_manager", protocol: "Request Offshore Performance Data", color: "var(--proto-csi)", packet: "📊" },
+                            { from: "csi_manager", to: "offshore_delivery_manager", protocol: "Gather KPI & SLA Reports", color: "var(--proto-csi)", packet: "📈" },
+                            { from: "offshore_delivery_manager", to: "csi_manager", protocol: "Offshore Performance Analysis", color: "var(--proto-csi)", packet: "📄" },
+                            { from: "csi_manager", to: "itsm_system", protocol: "Identify Improvement Areas (Problems)", color: "var(--proto-csi)", packet: "🔍" },
+                            { from: "csi_manager", to: "onshore_service_owner", protocol: "Propose Optimization", color: "var(--proto-csi)", packet: "💡" },
+                            { from: "onshore_service_owner", to: "itsm_system", protocol: "Implement Change for Efficiency", color: "var(--proto-csi)", packet: "🔄" },
+                            { from: "itsm_system", to: "offshore_it_team", protocol: "New Best Practice Adopted", color: "var(--proto-csi)", packet: "✨" },
+                            { from: "offshore_it_team", to: "knowledge_base", protocol: "Update KB with Improvements", color: "var(--proto-knowledge)", packet: "⬆️📚" }
+                        ]
+                    }
+                },
+                protocolLegend: {
+                    // Strategy
+                    "Inquiry: Offshore Feasibility?": { color: "var(--proto-strategy)", symbol: "❓" },
+                    "Request Cost-Benefit Analysis": { color: "var(--proto-strategy)", symbol: "📊" },
+                    "CBA Report (Positive ROI)": { color: "var(--proto-strategy)", symbol: "✅" },
+                    "Update Service Strategy (Offshoring Approved)": { color: "var(--proto-strategy)", symbol: "📝" },
+                    "Strategic Decision: Go Offshore!": { color: "var(--proto-strategy)", symbol: "🚀" },
+
+                    // Design
+                    "Design Mandate: Offshore Services": { color: "var(--proto-design)", symbol: "📐" },
+                    "Request Offshore Capabilities": { color: "var(--proto-design)", symbol: "🤝" },
+                    "Offshore Capability Profile": { color: "var(--proto-design)", symbol: "📄" },
+                    "Design KT Plan & Doc. Standards": { color: "var(--proto-design)", symbol: "📚" },
+                    "Design New Offshore Processes": { color: "var(--proto-design)", symbol: "⚙️" },
+                    "Review New OLA/SLA with Offshore": { color: "var(--proto-design)", symbol: "📝" },
+
+                    // Transition
+                    "Design Handoff for Transition": { color: "var(--proto-transition)", symbol: "🚧" },
+                    "Initiate Knowledge Transfer": { color: "var(--proto-transition)", symbol: "🧠" },
+                    "KT Session (Process Training)": { color: "var(--proto-transition)", symbol: "🎓" },
+                    "Update Offshore-Specific Docs": { color: "var(--proto-transition)", symbol: "⬆️📚" },
+                    "Configure Offshore Team in ITSM": { color: "var(--proto-transition)", symbol: "⚙️" },
+                    "Conduct Parallel Run/Shadowing": { color: "var(--proto-transition)", symbol: "👥" },
+                    "Formal Handover (Service Cutover)": { color: "var(--proto-transition)", symbol: "➡️" },
+                    "Service Now Live Offshore": { color: "var(--proto-transition)", symbol: "✅" },
+
+                    // Operation
+                    "User Submits Service Request": { color: "var(--proto-operation)", symbol: "🛒" },
+                    "Request Fulfilled": { color: "var(--proto-operation)", symbol: "✅" },
+                    "Automated Incident Alert": { color: "var(--proto-monitoring)", symbol: "🔔" },
+                    "Assign Request to Offshore": { color: "var(--proto-operation)", symbol: "➡️" },
+                    "Assign Incident to Offshore": { color: "var(--proto-operation)", symbol: "➡️" },
+                    "Incident Resolved": { color: "var(--proto-operation)", symbol: "✔️" },
+                    "User Service Restored": { color: "var(--proto-operation)", symbol: "😊" },
+
+                    // CSI
+                    "Request Offshore Performance Review": { color: "var(--proto-csi)", symbol: "📊" },
+                    "Gather Performance Data (SLAs)": { color: "var(--proto-csi)", symbol: "📈" },
+                    "Offshore Performance Report": { color: "var(--proto-csi)", symbol: "📄" },
+                    "Identify Problem Trends from Incidents": { color: "var(--proto-csi)", symbol: "🔍" },
+                    "Propose Process Improvement": { color: "var(--proto-csi)", symbol: "💡" },
+                    "Implement Change for Improvement": { color: "var(--proto-csi)", symbol: "🔄" },
+                    "New Optimized Process": { color: "var(--proto-csi)", symbol: "✨" },
+
+                    // Unified Flow Specific
+                    "Strategic Mandate: Offshoring": { color: "var(--proto-strategy)", symbol: "🚀" },
+                    "CBA Request": { color: "var(--proto-strategy)", symbol: "📊" },
+                    "CBA Approved": { color: "var(--proto-strategy)", symbol: "✅" },
+                    "Offshoring Initiative Added": { color: "var(--proto-strategy)", symbol: "📝" },
+                    "New Service Design Brief": { color: "var(--proto-design)", symbol: "📐" },
+                    "Gather Offshore Requirements": { color: "var(--proto-design)", symbol: "🤝" },
+                    "Offshore Capabilities Defined": { color: "var(--proto-design)", symbol: "📄" },
+                    "Design KT & Doc. Strategy": { color: "var(--proto-design)", symbol: "📚" },
+                    "Design Offshore Processes (ITSM)": { color: "var(--proto-design)", symbol: "⚙️" },
+                    "Draft SLA/OLA for Offshore": { color: "var(--proto-design)", symbol: "📜" },
+                    "Design Handoff for Build/Test": { color: "var(--proto-transition)", symbol: "🚧" },
+                    "Initiate Knowledge Capture": { color: "var(--proto-transition)", symbol: "🧠" },
+                    "Execute KT Sessions (Phase 1)": { color: "var(--proto-transition)", symbol: "🎓" },
+                    "Populate Offshore KB": { color: "var(--proto-transition)", symbol: "⬆️📚" },
+                    "Start Parallel Run / Shadowing": { color: "var(--proto-transition)", symbol: "👥" },
+                    "Formal Handover (Services Cutover)": { color: "var(--proto-transition)", symbol: "➡️" },
+                    "Offshore Team Live & Active": { color: "var(--proto-transition)", symbol: "✅" },
+                    "User Request to Offshore": { color: "var(--proto-operation)", symbol: "🛒" },
+                    "Offshore Ticket Created": { color: "var(--proto-itsm)", symbol: "🎫" },
+                    "Offshore Team Resolves Request": { color: "var(--proto-operation)", symbol: "✔️" },
+                    "Alert (handled by Offshore)": { color: "var(--proto-monitoring)", symbol: "🔔" },
+                    "Offshore Team Resolves Incident": { color: "var(--proto-operation)", symbol: "✔️" },
+                    "Request Offshore Performance Data": { color: "var(--proto-csi)", symbol: "📊" },
+                    "Gather KPI & SLA Reports": { color: "var(--proto-csi)", symbol: "📈" },
+                    "Offshore Performance Analysis": { color: "var(--proto-csi)", symbol: "📄" },
+                    "Identify Improvement Areas (Problems)": { color: "var(--proto-csi)", symbol: "🔍" },
+                    "Propose Optimization": { color: "var(--proto-csi)", symbol: "💡" },
+                    "Implement Change for Efficiency": { color: "var(--proto-csi)", symbol: "🔄" },
+                    "New Best Practice Adopted": { color: "var(--proto-csi)", symbol: "✨" },
+                    "Update KB with Improvements": { color: "var(--proto-knowledge)", symbol: "⬆️📚" },
+
+                    // Generic/Shared
+                    "ITSM System Interaction": { color: "var(--proto-itsm)", symbol: "🎫" },
+                    "Knowledge Base Update": { color: "var(--proto-knowledge)", symbol: "📚" },
+                    "Service Interaction": { color: "var(--proto-operation)", symbol: "🤝" },
+                    "Strategic Alignment": { color: "var(--proto-business)", packet: "🔗" },
+                    "Portfolio Update": { color: "var(--proto-strategy)", packet: "📝" },
+                    "Service Definition": { color: "var(--proto-portfolio)", packet: "📄" },
+                    "Design Mandate": { color: "var(--proto-design)", packet: "📐" },
+                    "Design Handoff": { color: "var(--proto-design)", packet: "🚧" },
+                    "CSI Input": { color: "var(--proto-transition)", packet: "📈" },
+                    "Knowledge Capture": { color: "var(--proto-knowledge)", packet: "📚" },
+                    "Document Knowledge": { color: "var(--proto-knowledge)", packet: "⬆️" },
+                    "Team Oversight": { color: "var(--proto-offshore-mgr)", packet: "🧑‍💼" },
+                    "Consult KB": { color: "var(--proto-knowledge)", packet: "🔎" },
+                    "User Request": { color: "var(--proto-operation)", packet: "🛒" },
+                    "Ticket Creation": { color: "var(--proto-itsm)", packet: "🎫" },
+                    "Incident Alert": { color: "var(--proto-monitoring)", packet: "🔔" },
+                    "Assign Ticket": { color: "var(--proto-itsm)", packet: "➡️" },
+                    "Performance Review": { color: "var(--proto-csi)", packet: "📊" },
+                    "Improvement Plan": { color: "var(--proto-itsm)", packet: "💡" }
+
+                },
+                animationSpeed: 1,
+                packetSize: 20,
+                deviceWidth: 100,
+                deviceHeight: 50,
+                packetDelayAfterArrival: 700,
+                initialUsersServed: 0,
+                totalUsersToServe: 5000 // A hypothetical total user count for the "users served" metric
+            };
+
+            // --- State Variables ---
+            let isRunning = false;
+            let currentFlowType = null;
+            let currentFlowStepIndex = 0;
+            let activePacket = null;
+            let animationFrameId = null;
+            let packetSendTimeoutId = null;
+            let usersServedByOffshore = config.initialUsersServed;
+
+            // --- DOM Elements ---
+            const elements = {
+                networkCanvas: document.getElementById('networkCanvas'),
+                legendGrid: document.querySelector('#legend .legend-grid'),
+                packetCount: document.getElementById('packetCount'),
+                protocolBadges: document.getElementById('protocolBadges'),
+                status: document.getElementById('status'),
+                controlButtons: document.querySelectorAll('.btn'),
+                usersServedByOffshore: document.getElementById('usersServedByOffshore')
+            };
+
+            /**
+             * Initializes the network visualization by creating devices and the legend.
+             * @memberof NetworkAnimator
+             */
+            function initializeNetwork() {
+                if (!elements.networkCanvas) return;
+
+                document.querySelectorAll('.device, .connection, .packet').forEach(el => el.remove());
+
+                createDevices();
+                initializeLegend();
+                resetStats();
+                updateStatus('Ready for ITIL Simulation!', 'var(--ready-status)');
+            }
+
+            /**
+             * Creates and appends device elements to the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function createDevices() {
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const deviceElement = document.createElement('div');
+                    deviceElement.className = 'device';
+                    deviceElement.id = id;
+                    deviceElement.style.left = `${device.x}px`;
+                    deviceElement.style.top = `${device.y}px`;
+                    deviceElement.style.borderColor = device.color;
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    deviceElement.style.background = `linear-gradient(45deg, ${colorValue || device.color}20, ${colorValue || device.color}40)`;
+
+                    deviceElement.innerHTML = `
+                        <div class="device-icon">${device.symbol}</div>
+                        <div class="device-name">${device.name}</div>
+                    `;
+
+                    elements.networkCanvas.appendChild(deviceElement);
+                });
+            }
+
+            /**
+             * Populates the protocol legend based on the `config.protocolLegend`.
+             * @memberof NetworkAnimator
+             */
+            function initializeLegend() {
+                if (!elements.legendGrid) return;
+
+                elements.legendGrid.innerHTML = '';
+                Object.entries(config.protocolLegend).forEach(([name, protocol]) => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protocol.color.replace('var(', '--').replace(')', '')).trim();
+
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${colorValue || protocol.color}"></div>
+                        <span>${protocol.symbol} ${name}</span>
+                    `;
+                    elements.legendGrid.appendChild(item);
+                });
+            }
+
+            /**
+             * Starts the animation for a specific flow type.
+             * @memberof NetworkAnimator
+             * @param {string} flowType - The type of ITIL flow to simulate.
+             */
+            function startAnimation(flowType) {
+                stopAnimation(); // Stop any previous animation
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(flowType === 'full_topology' ? 'full_topologyBtn' : `${flowType}Btn`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+
+                if (flowType === 'full_topology') {
+                    isRunning = false;
+                    currentFlowType = null;
+                    Object.values(config.flows.full_topology.sequence).forEach(conn => createConnection(conn));
+                    updateStatus('FULL TOPOLOGY (Static)', 'var(--ready-status)');
+                    updateStats();
+                } else {
+                    isRunning = true;
+                    currentFlowType = flowType;
+                    currentFlowStepIndex = 0;
+                    usersServedByOffshore = config.initialUsersServed; // Reset users served
+                    updateUsersServedDisplay();
+                    updateStatus(config.flows[flowType].description.toUpperCase(), 'var(--active-red)'); // Simulation is active!
+                    
+                    config.flows[currentFlowType].sequence.forEach(conn => createConnection(conn));
+
+                    packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    animationFrameId = requestAnimationFrame(animatePackets);
+                }
+            }
+
+            /**
+             * Sends the next packet in the current flow's sequence.
+             * @memberof NetworkAnimator
+             */
+            function sendNextPacketInSequence() {
+                if (!isRunning || !currentFlowType || !config.flows[currentFlowType]) {
+                    return;
+                }
+
+                const flowSequence = config.flows[currentFlowType].sequence;
+
+                if (currentFlowStepIndex < flowSequence.length) {
+                    const connectionStep = flowSequence[currentFlowStepIndex];
+                    createPacket(connectionStep);
+
+                    // Update users served by offshore
+                    if (connectionStep.usersServedIncrease && currentFlowType === 'unified_offshoring_project') {
+                        usersServedByOffshore = Math.min(config.totalUsersToServe, usersServedByOffshore + connectionStep.usersServedIncrease);
+                        updateUsersServedDisplay();
+                    }
+                    updateStats();
+                } else {
+                    stopAnimation();
+                    updateStatus('Flow Completed!', 'var(--ready-status)');
+                    // Ensure usersServedByOffshore is at the total for unified flow completion, or resets
+                    if (currentFlowType === 'unified_offshoring_project') {
+                         usersServedByOffshore = config.totalUsersToServe;
+                         updateUsersServedDisplay();
+                    }
+                }
+            }
+
+            /**
+             * Stops all ongoing animations and clears the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function stopAnimation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (packetSendTimeoutId) {
+                    clearTimeout(packetSendTimeoutId);
+                    packetSendTimeoutId = null;
+                }
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+                activePacket = null;
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                resetStats();
+            }
+
+            /**
+             * Resets the simulation statistics to their initial state.
+             * @memberof NetworkAnimator
+             */
+            function resetStats() {
+                usersServedByOffshore = config.initialUsersServed;
+                updateUsersServedDisplay();
+                updateStatus('Ready for ITIL Simulation!', 'var(--ready-status)');
+                updateStats();
+            }
+
+            /**
+             * Updates the displayed count of users served by offshore.
+             * @memberof NetworkAnimator
+             * @param {number} [count] - Optional, specific count to set.
+             */
+            function updateUsersServedDisplay(count = usersServedByOffshore) {
+                if (elements.usersServedByOffshore) {
+                    elements.usersServedByOffshore.textContent = count;
+                    elements.usersServedByOffshore.style.color = (count > 0 && count < config.totalUsersToServe) ? 'var(--active-orange)' : (count === config.totalUsersToServe ? 'var(--ready-status)' : 'var(--stopped-status)');
+                }
+            }
+
+            /**
+             * Creates a visual connection line between two devices.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object (from, to, protocol, color).
+             */
+            function createConnection(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Missing device for connection: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const fromX = fromDevice.x + config.deviceWidth / 2;
+                const fromY = fromDevice.y + config.deviceHeight / 2;
+                const toX = toDevice.x + config.deviceWidth / 2;
+                const toY = toDevice.y + config.deviceHeight / 2;
+
+                const dx = toX - fromX;
+                const dy = toY - fromY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                const connectionEl = document.createElement('div');
+                connectionEl.className = 'connection';
+                connectionEl.style.left = `${fromX}px`;
+                connectionEl.style.top = `${fromY}px`;
+                connectionEl.style.width = `${length}px`;
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                connectionEl.style.background = colorValue || connection.color;
+                connectionEl.style.transform = `rotate(${angle}deg)`;
+
+                connectionEl.innerHTML = `
+                    <span class="connection-label" style="background: ${colorValue || connection.color}E6;">
+                        ${connection.protocol}
+                    </span>
+                `;
+
+                elements.networkCanvas.appendChild(connectionEl);
+            }
+
+            /**
+             * Creates an animated packet element and sets it as the active packet.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object for the packet's path.
+             */
+            function createPacket(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Cannot create packet, missing device: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const packetEl = document.createElement('div');
+                packetEl.className = 'packet';
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                packetEl.style.background = colorValue || connection.color;
+                packetEl.textContent = connection.packet;
+
+                elements.networkCanvas.appendChild(packetEl);
+
+                const offsetX = config.deviceWidth / 2 - config.packetSize / 2;
+                const offsetY = config.deviceHeight / 2 - config.packetSize / 2;
+
+                activePacket = {
+                    connection: connection,
+                    element: packetEl,
+                    progress: 0,
+                    fromPos: { x: fromDevice.x + offsetX, y: fromDevice.y + offsetY },
+                    toPos: { x: toDevice.x + offsetX, y: toDevice.y + offsetY }
+                };
+            }
+
+            /**
+             * The main animation loop for packets, called via requestAnimationFrame.
+             * @memberof NetworkAnimator
+             */
+            function animatePackets() {
+                if (!isRunning) {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    return;
+                }
+
+                if (activePacket) {
+                    activePacket.progress += 0.003 * config.animationSpeed;
+
+                    if (activePacket.progress >= 1) {
+                        activePacket.element.remove();
+                        activePacket = null;
+                        currentFlowStepIndex++;
+                        
+                        packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    } else {
+                        const x = activePacket.fromPos.x + (activePacket.toPos.x - activePacket.fromPos.x) * activePacket.progress;
+                        const y = activePacket.fromPos.y + (activePacket.toPos.y - activePacket.fromPos.y) * activePacket.progress;
+
+                        activePacket.element.style.left = `${x}px`;
+                        activePacket.element.style.top = `${y}px`;
+                    }
+                }
+
+                updateStats();
+                animationFrameId = requestAnimationFrame(animatePackets);
+            }
+
+            /**
+             * Updates the statistics display (packet count, active protocols).
+             * @memberof NetworkAnimator
+             */
+            function updateStats() {
+                if (elements.packetCount) {
+                    elements.packetCount.textContent = activePacket ? 1 : 0;
+                }
+
+                if (elements.protocolBadges) {
+                    const uniqueProtocols = new Set();
+                    if (activePacket) {
+                        uniqueProtocols.add(activePacket.connection.protocol);
+                    }
+                    elements.protocolBadges.innerHTML = Array.from(uniqueProtocols).map(protocolName => {
+                        const protoConfig = config.protocolLegend[protocolName];
+                        if (protoConfig) {
+                            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protoConfig.color.replace('var(', '--').replace(')', '')).trim();
+                            return `<span class="protocol-badge" style="background: ${colorValue || protoConfig.color};">${protoConfig.symbol} ${protocolName}</span>`;
+                        }
+                        return '';
+                    }).join('');
+                }
+            }
+
+            /**
+             * Updates the status message displayed on the page.
+             * @memberof NetworkAnimator
+             * @param {string} message - The status message to display.
+             * @param {string} [color] - Optional, a CSS color string for the status text.
+             */
+            function updateStatus(message, color = 'var(--ready-status)') {
+                if (elements.status) {
+                    elements.status.textContent = message;
+                    elements.status.style.color = color;
+                }
+            }
+
+            /**
+             * Exports the current network configuration and flow steps to a CSV file.
+             * @memberof NetworkAnimator
+             */
+            function exportToCSV() {
+                const csvRows = [];
+                csvRows.push('Type,ID,Name,Symbol/Packet,X,Y,Color,Protocol,From,To,FlowStep,UsersServedIncrease');
+
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    csvRows.push(`Device,${id},${device.name},${device.symbol},${device.x},${device.y},${colorValue || device.color},,-,,`);
+                });
+
+                Object.entries(config.flows).forEach(([flowId, flow]) => {
+                    if (flowId === 'full_topology') return; 
+
+                    flow.sequence.forEach((conn, index) => {
+                        const colorValue = getComputedStyle(document.documentElement).getPropertyValue(conn.color.replace('var(', '--').replace(')', '')).trim();
+                        csvRows.push(`Flow Step,,${flowId} - Step ${index + 1},${conn.packet},,,,${colorValue || conn.color},${conn.protocol},${conn.from},${conn.to},${index + 1},${conn.usersServedIncrease || ''}`);
+                    });
+                });
+
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'itil_offshoring_simulation_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('ITIL Offshoring simulation data exported to CSV successfully!');
+            }
+
+            /**
+             * Handles keyboard input for animation controls.
+             * @memberof NetworkAnimator
+             * @param {KeyboardEvent} e - The keyboard event object.
+             */
+            function handleKeyDown(e) {
+                switch(e.key) {
+                    case '1': NetworkAnimator.startAnimation('itil_strategy_flow'); break;
+                    case '2': NetworkAnimator.startAnimation('itil_design_flow'); break;
+                    case '3': NetworkAnimator.startAnimation('itil_transition_flow'); break;
+                    case '4': NetworkAnimator.startAnimation('itil_operation_flow'); break;
+                    case '5': NetworkAnimator.startAnimation('itil_csi_flow'); break;
+                    case '6': NetworkAnimator.startAnimation('unified_offshoring_project'); break;
+                    case '7': NetworkAnimator.startAnimation('full_topology'); break;
+                    case ' ': e.preventDefault(); NetworkAnimator.stopAnimation(); break;
+                    case 'e': e.preventDefault(); NetworkAnimator.exportToCSV(); break;
+                }
+            }
+
+            // --- Public API ---
+            return {
+                initialize: initializeNetwork,
+                startAnimation: startAnimation,
+                stopAnimation: stopAnimation,
+                exportToCSV: exportToCSV,
+                handleKeyDown: handleKeyDown
+            };
+
+        })();
+
+        window.addEventListener('load', NetworkAnimator.initialize);
+        document.addEventListener('keydown', NetworkAnimator.handleKeyDown);
+
+    </script>
+</body>
+</html>
