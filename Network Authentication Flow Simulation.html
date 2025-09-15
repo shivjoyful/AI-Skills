@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visio-Style Network Animation - Enterprise Edition with Swimlanes & Sequential Flows</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Theme Colors */
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --header-bg: rgba(255, 255, 255, 0.1);
+            --canvas-bg: rgba(255, 255, 255, 0.05);
+            --canvas-border: rgba(255, 255, 255, 0.1);
+            --text-light: #fff;
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --active-red: #ff6b6b;
+            --active-orange: #ee5a24;
+            --stopped-status: #e74c3c;
+            --ready-status: #4CAF50;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+
+            /* Device Colors (HQ) */
+            --color-hq-dc: #ff6b6b; /* Red */
+            --color-hq-dns: #4ecdc4; /* Teal */
+            --color-hq-adfs: #ff9ff3; /* Pink */
+            --color-hq-client: #badc58; /* Green-yellow */
+            --color-hq-app: #feca57; /* Gold */
+            --color-hq-firewall: #e74c3c; /* Dark Red */
+            --color-hq-sdwan: #3498db; /* Blue */
+
+            /* Device Colors (Branch Office) */
+            --color-bo-client: #9b59b6; /* Amethyst */
+            --color-bo-firewall: #c0392b; /* Medium Red */
+            --color-bo-sdwan: #2980b9; /* Darker Blue */
+
+            /* Device Colors (Cloud/WAN) */
+            --color-azure-ad-tenant: #7ed6df; /* Light Blue */
+            --color-wan-cloud: #55efc4; /* Mint Green */
+            --color-mpls-cloud: #f9ca24; /* Gold-yellow */
+            --color-cloud-app: #a4b0be; /* Grey-blue */
+            --color-public-internet-client: #f8c291; /* Light Orange */
+            --color-vpn-gateway: #8e44ad; /* Dark Purple */
+
+
+            /* Protocol Colors */
+            --proto-dns: #feca57;
+            --proto-ldap: #ff6b6b;
+            --proto-tgt: #48dbfb;
+            --proto-saml: #ff9ff3;
+            --proto-oauth: #54a0ff;
+            --proto-aadconnect: #00d2d3;
+            --proto-sync: #00d2d3;
+            --proto-http: #a29bfe; /* New: HTTP/S for app access */
+            --proto-sdwan-tunnel: #81ecec; /* New: SD-WAN Tunnel */
+            --proto-app-req: #fd79a8; /* New: Application Request */
+            --proto-app-res: #00b894; /* New: Application Response */
+            --proto-mpls: #ff7675; /* New: MPLS specific color */
+            --proto-vpn: #8e44ad; /* New: VPN specific color */
+            --proto-nat: #ff7f50; /* New: NAT specific color */
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars due to animations */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1850px; /* Wider to accommodate sidebars + canvas */
+            margin: 20px auto;
+            padding: 0 20px; /* Adjust padding for sidebars */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: var(--header-bg);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, var(--active-red) 0%, var(--active-orange) 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn.active:hover {
+            box-shadow: 0 12px 30px rgba(255, 107, 107, 0.8);
+        }
+
+        /* Main Content Area (canvas and sidebars) */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+            position: relative; /* For proper positioning of sticky sidebars */
+        }
+
+        /* Sidebars */
+        .left-sidebar, .right-sidebar {
+            width: 250px;
+            min-width: 250px; /* Fixed width for sidebars */
+            max-height: calc(100vh - 40px); /* Limit height to viewport, considering body padding */
+            overflow-y: auto; /* Scroll if content overflows */
+            background: var(--sidebar-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: sticky; /* Sticky positioning within .main-content */
+            top: 20px; /* Distance from top of viewport */
+        }
+
+        .left-sidebar {
+            order: 1; /* Left side */
+        }
+
+        .right-sidebar {
+            order: 3; /* Right side */
+        }
+
+        /* Legend within Left Sidebar */
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column initially */
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Stats within Right Sidebar */
+        .stats h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .stats div:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .status-text {
+            color: var(--ready-status);
+            font-weight: bold;
+        }
+        .protocol-badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: flex-end; /* Align badges to the right */
+        }
+        .protocol-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+
+        /* Network Canvas */
+        .network-canvas {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            height: 850px; /* Increased height for more space */
+            background: var(--canvas-bg);
+            border: 2px solid var(--canvas-border);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            order: 2; /* Middle position */
+        }
+
+        /* Swimlane Styles */
+        .swimlane {
+            position: absolute;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .swimlane-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--bg-darker);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        /* Specific Swimlane Positioning within the canvas */
+        #bo-swimlane {
+            top: 20px;
+            left: 20px;
+            width: 400px; /* Adjusted width */
+            height: 180px; /* Adjusted height */
+        }
+        #hq-swimlane {
+            top: 220px; /* Adjusted top to create space */
+            left: 20px;
+            width: 680px; /* Adjusted width */
+            height: 610px; /* Adjusted height */
+        }
+        #wan-swimlane {
+            top: 20px;
+            left: 440px; /* Adjusted left to fit on screen */
+            width: 850px; /* Adjusted width, was 750px */
+            height: 810px; /* Adjusted height */
+        }
+
+
+        /* Device Styles */
+        .device {
+            position: absolute;
+            width: 100px; /* Reduced width */
+            height: 50px; /* Reduced height */
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px; /* Adjusted padding */
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .device:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            z-index: 11;
+        }
+
+        .device-icon {
+            font-size: 20px; /* Reduced font size */
+            margin-bottom: 3px; /* Adjusted margin */
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .device-name {
+            font-size: 10px; /* Reduced font size */
+            font-weight: bold;
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Connection Styles */
+        .connection {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            height: 2px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+            z-index: 5;
+        }
+
+        .connection-label {
+            position: absolute;
+            left: 50%;
+            top: -20px; /* Adjusted top */
+            transform: translateX(-50%);
+            padding: 3px 8px; /* Adjusted padding */
+            border-radius: 12px; /* Adjusted border-radius */
+            font-size: 10px; /* Reduced font size */
+            font-weight: bold;
+            color: var(--text-light);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Packet Styles */
+        .packet {
+            position: absolute;
+            width: 20px; /* Reduced width */
+            height: 20px; /* Reduced height */
+            border-radius: 50%;
+            font-size: 13px; /* Adjusted font size */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 15;
+            animation: pulse 1.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1900px) {
+            .container { max-width: 98%; padding: 0 10px; }
+            .left-sidebar, .right-sidebar { width: 220px; min-width: 220px; }
+            /* Auto adjust canvas width */
+            /* Swimlane and device positions will auto-adjust as canvas scales */
+        }
+
+        @media (max-width: 1700px) {
+            .left-sidebar, .right-sidebar { width: 200px; min-width: 200px; }
+            .network-canvas { height: 800px; }
+
+            #bo-swimlane { width: 350px; height: 160px; }
+            #hq-swimlane { top: 200px; width: 600px; height: 550px; }
+            #wan-swimlane { left: 390px; width: 750px; height: 760px; } /* Adjusted WAN width */
+
+            /* Recalibrate devices for slightly smaller canvas */
+            #bo_client { x: 50px; y: 70px; }
+            #bo_firewall { x: 190px; y: 70px; }
+            #bo_sdwan { x: 300px; y: 70px; }
+
+            #hq_client { x: 50px; y: 250px; }
+            #hq_dns { x: 190px; y: 200px; }
+            #hq_dc { x: 190px; y: 340px; }
+            #hq_adfs { x: 190px; y: 480px; }
+            #hq_app { x: 350px; y: 340px; }
+            #hq_firewall { x: 490px; y: 340px; }
+            #hq_sdwan { x: 580px; y: 340px; }
+
+            #wan_cloud { x: 450px; y: 100px; }
+            #mpls_cloud { x: 600px; y: 100px; }
+            #cloud_app { x: 600px; y: 300px; }
+            #azure_ad_tenant { x: 600px; y: 500px; }
+            #vpn_gateway { x: 750px; y: 300px; }
+            #public_internet_client { x: 900px; y: 300px; }
+        }
+
+        @media (max-width: 1400px) {
+            .left-sidebar, .right-sidebar { width: 150px; min-width: 150px; }
+            .network-canvas { height: 700px; }
+
+            #bo-swimlane { width: 300px; height: 140px; }
+            #hq-swimlane { top: 180px; width: 500px; height: 480px; }
+            #wan-swimlane { left: 340px; width: 650px; height: 660px; } /* Adjusted WAN width */
+
+            /* Recalibrate devices for smaller canvas */
+            #bo_client { x: 40px; y: 60px; }
+            #bo_firewall { x: 160px; y: 60px; }
+            #bo_sdwan { x: 250px; y: 60px; }
+
+            #hq_client { x: 40px; y: 220px; }
+            #hq_dns { x: 160px; y: 180px; }
+            #hq_dc { x: 160px; y: 290px; }
+            #hq_adfs { x: 160px; y: 400px; }
+            #hq_app { x: 300px; y: 290px; }
+            #hq_firewall { x: 420px; y: 290px; }
+            #hq_sdwan { x: 480px; y: 290px; }
+
+            #wan_cloud { x: 380px; y: 80px; }
+            #mpls_cloud { x: 500px; y: 80px; }
+            #cloud_app { x: 500px; y: 250px; }
+            #azure_ad_tenant { x: 500px; y: 420px; }
+            #vpn_gateway { x: 600px; y: 250px; }
+            #public_internet_client { x: 720px; y: 250px; }
+        }
+
+
+        @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column; /* Stack sidebars and canvas */
+                gap: 15px;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%; /* Full width when stacked */
+                position: static; /* Remove sticky behavior */
+                max-height: 200px; /* Limit height when stacked */
+                padding: 10px;
+            }
+            .right-sidebar { order: 1; } /* Stats on top when stacked */
+            .left-sidebar { order: 3; } /* Legend on bottom when stacked */
+            .network-canvas {
+                order: 2; /* Canvas in middle */
+                height: 550px; /* Reduce canvas height */
+            }
+
+            /* Adjust swimlanes for smaller canvas */
+            #bo-swimlane, #hq-swimlane, #wan-swimlane {
+                position: relative; /* Make them flow naturally within canvas */
+                top: auto; left: auto;
+                width: calc(100% - 40px); /* Full width minus padding */
+                height: auto;
+                margin: 10px auto; /* Center them */
+                padding: 10px;
+            }
+            .swimlane-label { top: -12px; left: 10px; font-size: 0.9em; padding: 3px 10px; }
+
+            /* Adjust devices within stacked swimlanes */
+            .device {
+                position: relative;
+                top: auto; left: auto;
+                margin: 10px auto; /* Center devices within swimlane */
+                display: flex;
+            }
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columns on wider small screens */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .header p { font-size: 0.9em; }
+            .controls { gap: 8px; }
+            .btn { padding: 8px 15px; font-size: 0.8em; }
+            .network-canvas { height: 450px; }
+            .device { width: 90px; height: 45px; }
+            .device-icon { font-size: 18px; }
+            .device-name { font-size: 9px; }
+            .legend-grid {
+                grid-template-columns: 1fr; /* Single column on very small screens */
+            }
+            .protocol-badges-container { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Enterprise Network Authentication Flow Simulation</h1>
+            <p>Visualizing HQ, Branch Office, SD-WAN, MPLS, Cloud App and Azure AD Interactions with Swimlanes & Sequential Packet Flows</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="hq_kerberosBtn" onclick="NetworkAnimator.startAnimation('hq_kerberos')" aria-label="Start HQ Kerberos Animation">🔑 HQ Kerberos</button>
+            <button class="btn" id="hq_adfsBtn" onclick="NetworkAnimator.startAnimation('hq_adfs')" aria-label="Start HQ ADFS Animation">🔐 HQ ADFS</button>
+            <button class="btn" id="hq_hybridBtn" onclick="NetworkAnimator.startAnimation('hq_hybrid')" aria-label="Start HQ Hybrid Animation">☁️ HQ Hybrid</button>
+            <button class="btn" id="interofficeBtn" onclick="NetworkAnimator.startAnimation('interoffice')" aria-label="Start Interoffice Access Animation">🏢 Interoffice</button>
+            <button class="btn" id="cloud_app_accessBtn" onclick="NetworkAnimator.startAnimation('cloud_app_access')" aria-label="Start Cloud App Access Animation">🚀 Cloud App Access</button>
+            <button class="btn" id="public_internet_vpn_accessBtn" onclick="NetworkAnimator.startAnimation('public_internet_vpn_access')" aria-label="Start Public VPN Access Animation">🌐 Public VPN Access</button>
+            <button class="btn" id="fullSuiteBtn" onclick="NetworkAnimator.startAnimation('full_suite')" aria-label="Show Full Suite Topology">🗺️ Full Suite</button>
+            <button class="btn" id="stopBtn" onclick="NetworkAnimator.stopAnimation()" aria-label="Stop Animation">⏹️ Stop</button>
+            <button class="btn" id="exportBtn" onclick="NetworkAnimator.exportToCSV()" aria-label="Export to CSV">💾 Export CSV</button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="legend" id="legend">
+                    <h3>Protocol Legend</h3>
+                    <div class="legend-grid">
+                        <!-- Legend items will be created dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-canvas" id="networkCanvas">
+                <!-- Swimlanes -->
+                <div id="bo-swimlane" class="swimlane">
+                    <span class="swimlane-label">Branch Office Site</span>
+                </div>
+                <div id="hq-swimlane" class="swimlane">
+                    <span class="swimlane-label">Headquarters Site</span>
+                </div>
+                <div id="wan-swimlane" class="swimlane">
+                    <span class="swimlane-label">Cloud / WAN Fabric</span>
+                </div>
+
+                <!-- Devices and connections will be created dynamically -->
+            </div>
+
+            <div class="right-sidebar">
+                <div class="stats" id="stats">
+                    <h3>Simulation Stats</h3>
+                    <div>Active Packets: <span id="packetCount">0</span></div>
+                    <div>Status: <span id="status" class="status-text">Ready</span></div>
+                    <div>Active Protocols:</div>
+                    <div id="protocolBadges" class="protocol-badges-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @namespace NetworkAnimator
+         * @description Manages the network animation and visualization for an enterprise environment with swimlanes and sequential flows.
+         */
+        const NetworkAnimator = (() => {
+            // --- Configuration ---
+            const config = {
+                devices: {
+                    // Branch Office (BO) Site - inside #bo-swimlane (top-left)
+                    bo_client: { symbol: "💻", name: "BO Client", x: 60, y: 70, color: "var(--color-bo-client)", type: "Workstation" },
+                    bo_firewall: { symbol: "🧱", name: "BO Firewall", x: 200, y: 70, color: "var(--color-bo-firewall)", type: "Security" },
+                    bo_sdwan: { symbol: "🛣️", name: "BO SD-WAN", x: 320, y: 70, color: "var(--color-bo-sdwan)", type: "Network" },
+
+                    // Headquarters (HQ) Site - inside #hq-swimlane (bottom-left)
+                    hq_client: { symbol: "💻", name: "HQ Client", x: 60, y: 280, color: "var(--color-hq-client)", type: "Workstation" },
+                    hq_dns: { symbol: "🌐", name: "HQ DNS", x: 200, y: 230, color: "var(--color-hq-dns)", type: "Server" },
+                    hq_dc: { symbol: "🏢", name: "HQ DOMAIN CTRL", x: 200, y: 360, color: "var(--color-hq-dc)", type: "Server" },
+                    hq_adfs: { symbol: "🔐", name: "HQ ADFS", x: 200, y: 490, color: "var(--color-hq-adfs)", type: "Server" },
+                    hq_app: { symbol: "📈", name: "HQ App Server", x: 380, y: 360, color: "var(--color-hq-app)", type: "Server" },
+                    hq_firewall: { symbol: "🧱", name: "HQ Firewall", x: 520, y: 360, color: "var(--color-hq-firewall)", type: "Security" },
+                    hq_sdwan: { symbol: "🛣️", name: "HQ SD-WAN", x: 620, y: 360, color: "var(--color-hq-sdwan)", type: "Network" },
+
+                    // Cloud/WAN - inside #wan-swimlane (right side)
+                    wan_cloud: { symbol: "☁️", name: "SD-WAN Fabric", x: 500, y: 100, color: "var(--color-wan-cloud)", type: "Cloud" },
+                    mpls_cloud: { symbol: "⭐", name: "MPLS Cloud", x: 700, y: 100, color: "var(--color-mpls-cloud)", type: "WAN" },
+                    cloud_app: { symbol: "🌐", name: "Cloud App", x: 700, y: 300, color: "var(--color-cloud-app)", type: "Application" },
+                    azure_ad_tenant: { symbol: "☁️", name: "Azure AD Tenant", x: 700, y: 500, color: "var(--color-azure-ad-tenant)", type: "Cloud" },
+                    vpn_gateway: { symbol: "🔒", name: "VPN Gateway", x: 900, y: 300, color: "var(--color-vpn-gateway)", type: "Security" },
+
+                    // Outside Cloud/WAN (Public Internet)
+                    public_internet_client: { symbol: "👤", name: "Public Client", x: 1080, y: 300, color: "var(--color-public-internet-client)", type: "Workstation" }
+                },
+                flows: {
+                    hq_kerberos: {
+                        description: "HQ Client Kerberos Authentication",
+                        sequence: [
+                            { from: "hq_client", to: "hq_dns", protocol: "DNS Query", color: "var(--proto-dns)", packet: "🔍" },
+                            { from: "hq_dns", to: "hq_client", protocol: "DNS Reply", color: "var(--proto-dns)", packet: "✅" },
+                            { from: "hq_client", to: "hq_dc", protocol: "AS-REQ", color: "var(--proto-ldap)", packet: "📋" },
+                            { from: "hq_dc", to: "hq_client", protocol: "AS-REP/TGT", color: "var(--proto-tgt)", packet: "🎫" },
+                            { from: "hq_client", to: "hq_dc", protocol: "TGS-REQ", color: "var(--proto-ldap)", packet: "📋" },
+                            { from: "hq_dc", to: "hq_client", protocol: "TGS-REP/ST", color: "var(--proto-tgt)", packet: "🎟️" },
+                            { from: "hq_client", to: "hq_app", protocol: "App Access Req", color: "var(--proto-app-req)", packet: "📧" }
+                        ]
+                    },
+                    hq_adfs: {
+                        description: "HQ Client ADFS Authentication",
+                        sequence: [
+                            { from: "hq_client", to: "hq_adfs", protocol: "SAML Req", color: "var(--proto-saml)", packet: "🌐" },
+                            { from: "hq_adfs", to: "hq_dc", protocol: "LDAP Query", color: "var(--proto-ldap)", packet: "📋" },
+                            { from: "hq_dc", to: "hq_adfs", protocol: "LDAP Reply", color: "var(--proto-ldap)", packet: "✅" },
+                            { from: "hq_adfs", to: "hq_client", protocol: "SAML Token", color: "var(--proto-saml)", packet: "🎫" },
+                            { from: "hq_client", to: "azure_ad_tenant", protocol: "OAuth Req", color: "var(--proto-oauth)", packet: "🔑" }
+                        ]
+                    },
+                    hq_hybrid: {
+                        description: "HQ Hybrid Cloud Authentication/Sync",
+                        sequence: [
+                            { from: "hq_dc", to: "azure_ad_tenant", protocol: "AADConnect Sync", color: "var(--proto-aadconnect)", packet: "🔄" },
+                            { from: "azure_ad_tenant", to: "hq_dc", protocol: "Sync Confirmation", color: "var(--proto-sync)", packet: "✅" },
+                            { from: "hq_client", to: "azure_ad_tenant", protocol: "OAuth Auth", color: "var(--proto-oauth)", packet: "🔑" },
+                            { from: "azure_ad_tenant", to: "hq_client", protocol: "OAuth Token", color: "var(--proto-oauth)", packet: "🔑" }
+                        ]
+                    },
+                    interoffice: {
+                        description: "BO Client Interoffice App Access via SD-WAN",
+                        sequence: [
+                            { from: "bo_client", to: "bo_firewall", protocol: "HTTP Request", color: "var(--proto-http)", packet: "🌍" },
+                            { from: "bo_firewall", to: "bo_sdwan", protocol: "HTTP Forward", color: "var(--proto-http)", packet: "➡️" },
+                            { from: "bo_sdwan", to: "wan_cloud", protocol: "SD-WAN Tunnel", color: "var(--proto-sdwan-tunnel)", packet: "🛡️" },
+                            { from: "wan_cloud", to: "hq_sdwan", protocol: "SD-WAN Tunnel", color: "var(--proto-sdwan-tunnel)", packet: "🛡️" },
+                            { from: "hq_sdwan", to: "hq_firewall", protocol: "HTTP Forward", color: "var(--proto-http)", packet: "➡️" },
+                            { from: "hq_firewall", to: "hq_app", protocol: "HTTP Request", color: "var(--proto-app-req)", packet: "📧" },
+                            { from: "hq_app", to: "hq_dc", protocol: "Kerb Auth Req", color: "var(--proto-ldap)", packet: "📋" }, /* App authenticates to DC */
+                            { from: "hq_dc", to: "hq_app", protocol: "Kerb Auth Reply", color: "var(--proto-tgt)", packet: "✅" },
+                            { from: "hq_app", to: "hq_firewall", protocol: "HTTP Response", color: "var(--proto-app-res)", packet: "✔️" },
+                            { from: "hq_firewall", to: "hq_sdwan", protocol: "HTTP Response", color: "var(--proto-app-res)", packet: "⬅️" },
+                            { from: "hq_sdwan", to: "wan_cloud", protocol: "SD-WAN Tunnel", color: "var(--proto-sdwan-tunnel)", packet: "🛡️" },
+                            { from: "wan_cloud", to: "bo_sdwan", protocol: "SD-WAN Tunnel", color: "var(--proto-sdwan-tunnel)", packet: "🛡️" },
+                            { from: "bo_sdwan", to: "bo_firewall", protocol: "HTTP Response", color: "var(--proto-app-res)", packet: "⬅️" },
+                            { from: "bo_firewall", to: "bo_client", protocol: "HTTP Response", color: "var(--proto-app-res)", packet: "✅" }
+                        ]
+                    },
+                    cloud_app_access: {
+                        description: "HQ Client Cloud App Access (SD-WAN & MPLS)",
+                        sequence: [
+                            { from: "hq_client", to: "hq_dns", protocol: "DNS Query", color: "var(--proto-dns)", packet: "🔍" },
+                            { from: "hq_dns", to: "hq_client", protocol: "DNS Reply", color: "var(--proto-dns)", packet: "✅" },
+                            { from: "hq_client", to: "hq_firewall", protocol: "HTTPS Req", color: "var(--proto-http)", packet: "🌍" },
+                            { from: "hq_firewall", to: "hq_sdwan", protocol: "HTTPS Fwd", color: "var(--proto-http)", packet: "➡️" },
+                            { from: "hq_sdwan", to: "wan_cloud", protocol: "SD-WAN Tunnel", color: "var(--proto-sdwan-tunnel)", packet: "🛡️" },
+                            { from: "wan_cloud", to: "mpls_cloud", protocol: "MPLS Ingress", color: "var(--proto-mpls)", packet: "⭐" },
+                            { from: "mpls_cloud", to: "cloud_app", protocol: "HTTPS Req", color: "var(--proto-http)", packet: "📧" },
+                            { from: "cloud_app", to: "azure_ad_tenant", protocol: "SAML Auth Req", color: "var(--proto-saml)", packet: "🔐" },
+                            { from: "azure_ad_tenant", to: "cloud_app", protocol: "SAML Auth Reply", color: "var(--proto-saml)", packet: "✅" },
+                            { from: "cloud_app", to: "mpls_cloud", protocol: "HTTPS Res", color: "var(--proto-app-res)", packet: "✔️" },
+                            { from: "mpls_cloud", to: "wan_cloud", protocol: "MPLS Egress", color: "var(--proto-mpls)", packet: "⭐" },
+                            { from: "wan_cloud", to: "hq_sdwan", protocol: "SD-WAN Tunnel", color: "var(--proto-sdwan-tunnel)", packet: "🛡️" },
+                            { from: "hq_sdwan", to: "hq_firewall", protocol: "HTTPS Res", color: "var(--proto-app-res)", packet: "⬅️" },
+                            { from: "hq_firewall", to: "hq_client", protocol: "HTTPS Res", color: "var(--proto-app-res)", packet: "✅" }
+                        ]
+                    },
+                    public_internet_vpn_access: {
+                        description: "Public Client VPN Access to HQ App",
+                        sequence: [
+                            { from: "public_internet_client", to: "vpn_gateway", protocol: "VPN Connect Request", color: "var(--proto-vpn)", packet: "🔑" },
+                            { from: "vpn_gateway", to: "public_internet_client", protocol: "VPN Auth Response", color: "var(--proto-vpn)", packet: "✅" },
+                            { from: "public_internet_client", to: "vpn_gateway", protocol: "Encrypted Traffic (NAT)", color: "var(--proto-nat)", packet: "🔒" }, /* NAT occurs here */
+                            { from: "vpn_gateway", to: "hq_firewall", protocol: "VPN Tunnel Data", color: "var(--proto-vpn)", packet: "🛡️" },
+                            { from: "hq_firewall", to: "hq_app", protocol: "Internal App Request", color: "var(--proto-app-req)", packet: "📧" },
+                            { from: "hq_app", to: "hq_firewall", protocol: "Internal App Response", color: "var(--proto-app-res)", packet: "✔️" },
+                            { from: "hq_firewall", to: "vpn_gateway", protocol: "VPN Tunnel Data", color: "var(--proto-vpn)", packet: "🛡️" },
+                            { from: "vpn_gateway", to: "public_internet_client", protocol: "Encrypted Traffic (De-NAT)", color: "var(--proto-nat)", packet: "🔓" } /* De-NAT */
+                        ]
+                    }
+                },
+                protocolLegend: {
+                    "DNS Query": { color: "var(--proto-dns)", symbol: "🔍" },
+                    "DNS Reply": { color: "var(--proto-dns)", symbol: "✅" },
+                    "AS-REQ": { color: "var(--proto-ldap)", symbol: "📋" },
+                    "AS-REP/TGT": { color: "var(--proto-tgt)", symbol: "🎫" },
+                    "TGS-REQ": { color: "var(--proto-ldap)", symbol: "📋" },
+                    "TGS-REP/ST": { color: "var(--proto-tgt)", symbol: "🎟️" },
+                    "App Access Req": { color: "var(--proto-app-req)", symbol: "📧" },
+                    "SAML Req": { color: "var(--proto-saml)", symbol: "🌐" },
+                    "LDAP Query": { color: "var(--proto-ldap)", symbol: "📋" },
+                    "LDAP Reply": { color: "var(--proto-ldap)", symbol: "✅" },
+                    "SAML Token": { color: "var(--proto-saml)", symbol: "🎫" },
+                    "OAuth Req": { color: "var(--proto-oauth)", symbol: "🔑" },
+                    "AADConnect Sync": { color: "var(--proto-aadconnect)", symbol: "🔄" },
+                    "Sync Confirmation": { color: "var(--proto-sync)", symbol: "✅" },
+                    "OAuth Auth": { color: "var(--proto-oauth)", symbol: "🔑" },
+                    "OAuth Token": { color: "var(--proto-oauth)", symbol: "🔑" },
+                    "HTTP Request": { color: "var(--proto-http)", symbol: "🌍" },
+                    "HTTP Forward": { color: "var(--proto-http)", symbol: "➡️" },
+                    "SD-WAN Tunnel": { color: "var(--proto-sdwan-tunnel)", symbol: "🛡️" },
+                    "Kerb Auth Req": { color: "var(--proto-ldap)", symbol: "📋" },
+                    "Kerb Auth Reply": { color: "var(--proto-tgt)", symbol: "✅" },
+                    "HTTP Response": { color: "var(--proto-app-res)", symbol: "✅" },
+                    "HTTPS Req": { color: "var(--proto-http)", symbol: "🌍" },
+                    "HTTPS Fwd": { color: "var(--proto-http)", symbol: "➡️" },
+                    "MPLS Ingress": { color: "var(--proto-mpls)", symbol: "⭐" },
+                    "MPLS Egress": { color: "var(--proto-mpls)", symbol: "⭐" },
+                    "HTTPS Res": { color: "var(--proto-app-res)", symbol: "✔️" },
+                    "SAML Auth Req": { color: "var(--proto-saml)", symbol: "🔐" },
+                    "SAML Auth Reply": { color: "var(--proto-saml)", symbol: "✅" },
+                    "VPN Connect Request": { color: "var(--proto-vpn)", symbol: "🔑" },
+                    "VPN Auth Response": { color: "var(--proto-vpn)", symbol: "✅" },
+                    "Encrypted Traffic (NAT)": { color: "var(--proto-nat)", symbol: "🔒" },
+                    "VPN Tunnel Data": { color: "var(--proto-vpn)", symbol: "🛡️" },
+                    "Internal App Request": { color: "var(--proto-app-req)", symbol: "📧" },
+                    "Internal App Response": { color: "var(--proto-app-res)", symbol: "✔️" },
+                    "Encrypted Traffic (De-NAT)": { color: "var(--proto-nat)", symbol: "🔓" }
+                },
+                animationSpeed: 0.8, // Further reduced speed for better observation
+                packetSize: 20, // Consistent packet size
+                deviceWidth: 100, // Consistent device width
+                deviceHeight: 50, // Consistent device height
+                packetDelayAfterArrival: 750 // Milliseconds delay before next packet in sequence (increased slightly)
+            };
+
+            // --- State Variables ---
+            let isRunning = false;
+            let currentFlowType = null;
+            let currentFlowStepIndex = 0;
+            let activePacket = null; // Only one packet active at a time for sequential flows
+            let animationFrameId = null;
+            let packetSendTimeoutId = null; // For delay between packets
+
+            // --- DOM Elements ---
+            const elements = {
+                networkCanvas: document.getElementById('networkCanvas'),
+                legendGrid: document.querySelector('#legend .legend-grid'),
+                packetCount: document.getElementById('packetCount'),
+                protocolBadges: document.getElementById('protocolBadges'),
+                status: document.getElementById('status'),
+                controlButtons: document.querySelectorAll('.btn')
+            };
+
+            /**
+             * Initializes the network visualization by creating devices and the legend.
+             * @memberof NetworkAnimator
+             */
+            function initializeNetwork() {
+                if (!elements.networkCanvas) return;
+
+                // Clear only dynamically added elements (devices, connections, packets)
+                document.querySelectorAll('.device, .connection, .packet').forEach(el => el.remove());
+
+                createDevices();
+                initializeLegend();
+                updateStats();
+                updateStatus('Ready', 'var(--ready-status)');
+            }
+
+            /**
+             * Creates and appends device elements to the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function createDevices() {
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const deviceElement = document.createElement('div');
+                    deviceElement.className = 'device';
+                    deviceElement.id = id;
+                    deviceElement.style.left = `${device.x}px`;
+                    deviceElement.style.top = `${device.y}px`;
+                    deviceElement.style.borderColor = device.color;
+                    // Use CSS variable for background for consistency, replacing var() with actual value if possible
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    deviceElement.style.background = `linear-gradient(45deg, ${colorValue || device.color}20, ${colorValue || device.color}40)`;
+
+                    deviceElement.innerHTML = `
+                        <div class="device-icon">${device.symbol}</div>
+                        <div class="device-name">${device.name}</div>
+                    `;
+
+                    elements.networkCanvas.appendChild(deviceElement);
+                });
+            }
+
+            /**
+             * Populates the protocol legend based on the `config.protocolLegend`.
+             * @memberof NetworkAnimator
+             */
+            function initializeLegend() {
+                if (!elements.legendGrid) return;
+
+                elements.legendGrid.innerHTML = '';
+                Object.entries(config.protocolLegend).forEach(([name, protocol]) => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protocol.color.replace('var(', '--').replace(')', '')).trim();
+
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${colorValue || protocol.color}"></div>
+                        <span>${protocol.symbol} ${name}</span>
+                    `;
+                    elements.legendGrid.appendChild(item);
+                });
+            }
+
+            /**
+             * Starts the animation for a specific flow type (e.g., 'hq_kerberos', 'interoffice', 'full_suite').
+             * @memberof NetworkAnimator
+             * @param {string} flowType - The type of authentication flow to simulate.
+             */
+            function startAnimation(flowType) {
+                stopAnimation(); // Stop any previous animation
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(
+                    flowType === 'full_suite' ? 'fullSuiteBtn' : `${flowType}Btn`
+                );
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Clear all dynamic connections and packets before drawing new ones
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+
+                if (flowType === 'full_suite') {
+                    // For full_suite, draw all connections statically, no animation
+                    isRunning = false; // No packet animation for full suite
+                    currentFlowType = null;
+                    // Draw all connections from all flows
+                    Object.values(config.flows).forEach(flow => {
+                        flow.sequence.forEach(conn => createConnection(conn));
+                    });
+                    updateStatus('FULL SUITE TOPOLOGY', 'var(--ready-status)');
+                    updateStats();
+                } else {
+                    isRunning = true;
+                    currentFlowType = flowType;
+                    currentFlowStepIndex = 0;
+                    updateStatus(config.flows[flowType].description.toUpperCase(), 'var(--ready-status)');
+                    
+                    // Create all static connection lines for the selected flow
+                    config.flows[currentFlowType].sequence.forEach(conn => createConnection(conn));
+
+                    // Start the first packet in the sequence after a small initial delay
+                    packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+
+                    // Start the animation loop
+                    animationFrameId = requestAnimationFrame(animatePackets);
+                }
+            }
+
+            /**
+             * Sends the next packet in the current flow's sequence.
+             * @memberof NetworkAnimator
+             */
+            function sendNextPacketInSequence() {
+                if (!isRunning || !currentFlowType || !config.flows[currentFlowType]) {
+                    return;
+                }
+
+                const flowSequence = config.flows[currentFlowType].sequence;
+
+                if (currentFlowStepIndex < flowSequence.length) {
+                    const connectionStep = flowSequence[currentFlowStepIndex];
+                    createPacket(connectionStep);
+                    updateStats(); // Update stats when new packet is created
+                } else {
+                    // Flow is complete
+                    stopAnimation();
+                    updateStatus('Flow Completed!', 'var(--ready-status)');
+                }
+            }
+
+
+            /**
+             * Stops all ongoing animations and clears the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function stopAnimation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (packetSendTimeoutId) {
+                    clearTimeout(packetSendTimeoutId);
+                    packetSendTimeoutId = null;
+                }
+
+                // Clear all dynamic connections and packets
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+                activePacket = null; // Ensure no packet object is left in state
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                updateStatus('Stopped', 'var(--stopped-status)'); // Red color for stopped status
+                updateStats();
+            }
+
+            /**
+             * Creates a visual connection line between two devices.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object (from, to, protocol, color).
+             */
+            function createConnection(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Missing device for connection: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                // Adjust coordinates to be from center of device
+                const fromX = fromDevice.x + config.deviceWidth / 2;
+                const fromY = fromDevice.y + config.deviceHeight / 2;
+                const toX = toDevice.x + config.deviceWidth / 2;
+                const toY = toDevice.y + config.deviceHeight / 2;
+
+                const dx = toX - fromX;
+                const dy = toY - fromY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                const connectionEl = document.createElement('div');
+                connectionEl.className = 'connection';
+                connectionEl.style.left = `${fromX}px`;
+                connectionEl.style.top = `${fromY}px`;
+                connectionEl.style.width = `${length}px`;
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                connectionEl.style.background = colorValue || connection.color;
+                connectionEl.style.transform = `rotate(${angle}deg)`;
+
+                connectionEl.innerHTML = `
+                    <span class="connection-label" style="background: ${colorValue || connection.color}80;">
+                        ${connection.protocol}
+                    </span>
+                `;
+
+                elements.networkCanvas.appendChild(connectionEl);
+            }
+
+            /**
+             * Creates an animated packet element and sets it as the active packet.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object for the packet's path.
+             */
+            function createPacket(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Cannot create packet, missing device: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const packetEl = document.createElement('div');
+                packetEl.className = 'packet';
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                packetEl.style.background = colorValue || connection.color;
+                packetEl.textContent = connection.packet;
+
+                elements.networkCanvas.appendChild(packetEl);
+
+                // Adjust for packet size to center it relative to device center
+                const offsetX = config.deviceWidth / 2 - config.packetSize / 2;
+                const offsetY = config.deviceHeight / 2 - config.packetSize / 2;
+
+                activePacket = {
+                    connection: connection,
+                    element: packetEl,
+                    progress: 0, // 0 to 1, representing position along the path
+                    fromPos: { x: fromDevice.x + offsetX, y: fromDevice.y + offsetY },
+                    toPos: { x: toDevice.x + offsetX, y: toDevice.y + offsetY }
+                };
+            }
+
+            /**
+             * The main animation loop for packets, called via requestAnimationFrame.
+             * @memberof NetworkAnimator
+             */
+            function animatePackets() {
+                if (!isRunning) {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    return;
+                }
+
+                if (activePacket) {
+                    activePacket.progress += 0.003 * config.animationSpeed; // Slower speed (0.003 base)
+
+                    if (activePacket.progress >= 1) {
+                        // Packet reached destination
+                        activePacket.element.remove();
+                        activePacket = null; // Clear active packet
+                        currentFlowStepIndex++; // Move to next step
+                        
+                        // Introduce a delay before sending the next packet
+                        packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    } else {
+                        const x = activePacket.fromPos.x + (activePacket.toPos.x - activePacket.fromPos.x) * activePacket.progress;
+                        const y = activePacket.fromPos.y + (activePacket.toPos.y - activePacket.fromPos.y) * activePacket.progress;
+
+                        activePacket.element.style.left = `${x}px`;
+                        activePacket.element.style.top = `${y}px`;
+                    }
+                }
+
+                updateStats();
+                animationFrameId = requestAnimationFrame(animatePackets);
+            }
+
+            /**
+             * Updates the statistics display (packet count, active protocols).
+             * @memberof NetworkAnimator
+             */
+            function updateStats() {
+                if (elements.packetCount) {
+                    elements.packetCount.textContent = activePacket ? 1 : 0;
+                }
+
+                if (elements.protocolBadges) {
+                    const uniqueProtocols = new Set();
+                    if (activePacket) {
+                        uniqueProtocols.add(activePacket.connection.protocol);
+                    }
+                    elements.protocolBadges.innerHTML = Array.from(uniqueProtocols).map(protocolName => {
+                        const protoConfig = config.protocolLegend[protocolName];
+                        if (protoConfig) {
+                            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protoConfig.color.replace('var(', '--').replace(')', '')).trim();
+                            return `<span class="protocol-badge" style="background: ${colorValue || protoConfig.color};">${protoConfig.symbol} ${protocolName}</span>`;
+                        }
+                        return '';
+                    }).join('');
+                }
+            }
+
+            /**
+             * Updates the status message displayed on the page.
+             * @memberof NetworkAnimator
+             * @param {string} message - The status message to display.
+             * @param {string} [color] - Optional, a CSS color string for the status text.
+             */
+            function updateStatus(message, color = 'var(--ready-status)') {
+                if (elements.status) {
+                    elements.status.textContent = message;
+                    elements.status.style.color = color;
+                }
+            }
+
+            /**
+             * Exports the current network configuration and flow steps to a CSV file.
+             * @memberof NetworkAnimator
+             */
+            function exportToCSV() {
+                const csvRows = [];
+                csvRows.push('Type,ID,Name,Symbol/Packet,X,Y,Color,Protocol,From,To,FlowStep');
+
+                // Devices
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    csvRows.push(`Device,${id},${device.name},${device.symbol},${device.x},${device.y},${colorValue || device.color},,-,,`);
+                });
+
+                // Flow Steps
+                Object.entries(config.flows).forEach(([flowId, flow]) => {
+                    flow.sequence.forEach((conn, index) => {
+                        const colorValue = getComputedStyle(document.documentElement).getPropertyValue(conn.color.replace('var(', '--').replace(')', '')).trim();
+                        csvRows.push(`Flow Step,,${flowId} - Step ${index + 1},${conn.packet},,,,${colorValue || conn.color},${conn.protocol},${conn.from},${conn.to},${index + 1}`);
+                    });
+                });
+
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'enterprise_network_simulation_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url); // Clean up
+
+                alert('Enterprise network data exported to CSV successfully!');
+            }
+
+            /**
+             * Handles keyboard input for animation controls.
+             * @memberof NetworkAnimator
+             * @param {KeyboardEvent} e - The keyboard event object.
+             */
+            function handleKeyDown(e) {
+                switch(e.key) {
+                    case '1': NetworkAnimator.startAnimation('hq_kerberos'); break;
+                    case '2': NetworkAnimator.startAnimation('hq_adfs'); break;
+                    case '3': NetworkAnimator.startAnimation('hq_hybrid'); break;
+                    case '4': NetworkAnimator.startAnimation('interoffice'); break;
+                    case '5': NetworkAnimator.startAnimation('cloud_app_access'); break;
+                    case '6': NetworkAnimator.startAnimation('public_internet_vpn_access'); break; // New shortcut
+                    case '7': NetworkAnimator.startAnimation('full_suite'); break; // Adjusted shortcut
+                    case ' ': e.preventDefault(); NetworkAnimator.stopAnimation(); break; // Prevent space from scrolling
+                    case 'e': e.preventDefault(); NetworkAnimator.exportToCSV(); break;
+                }
+            }
+
+            // --- Public API ---
+            return {
+                initialize: initializeNetwork,
+                startAnimation: startAnimation,
+                stopAnimation: stopAnimation,
+                exportToCSV: exportToCSV,
+                handleKeyDown: handleKeyDown // Expose for event listener
+            };
+
+        })(); // End of IIFE
+
+        // Initialize on load
+        window.addEventListener('load', NetworkAnimator.initialize);
+        // Add keyboard controls
+        document.addEventListener('keydown', NetworkAnimator.handleKeyDown);
+
+    </script>
+</body>
+</html>
