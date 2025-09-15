@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Project: AD Migration Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Theme Colors */
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --header-bg: rgba(255, 255, 255, 0.1);
+            --canvas-bg: rgba(255, 255, 255, 0.05);
+            --canvas-border: rgba(255, 255, 255, 0.1);
+            --text-light: #fff;
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --active-red: #ff6b6b;
+            --active-orange: #ee5a24;
+            --stopped-status: #e74c3c;
+            --ready-status: #4CAF50;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+
+            /* Device/Entity Colors (IT Project Specific) */
+            --color-governance: #3f51b5; /* Indigo */
+            --color-pm: #e91e63; /* Pink */
+            --color-architect: #ff9800; /* Orange */
+            --color-ad: #673ab7; /* Deep Purple */
+            --color-network: #2196f3; /* Blue */
+            --color-server: #4caf50; /* Green */
+            --color-app: #00bcd4; /* Cyan */
+            --color-qa: #8bc34a; /* Light Green */
+            --color-helpdesk: #ffc107; /* Amber */
+            --color-user: #e91e63; /* Pink */
+
+            --color-charter: #ffeb3b; /* Yellow */
+            --color-design: #cddc39; /* Light Green */
+            --color-plan: #009688; /* Teal */
+            --color-old-ad: #795548; /* Brown */
+            --color-new-ad: #9c27b0; /* Purple */
+            --color-migration-tool: #03a9f4; /* Light Blue */
+            --color-env: #546e7a; /* Blue Grey Dark */
+            --color-monitor: #607d8b; /* Blue Grey */
+            --color-training: #ff7043; /* Deep Orange */
+            --color-ticketing: #f44336; /* Red */
+            --color-dashboard: #f1c40f; /* Yellow */
+
+            --color-migrated: #2ecc71; /* Emerald Green */
+
+            /* Protocol/Action Colors (IT Project Specific) */
+            --proto-initiation: #ffc107; /* Amber */
+            --proto-planning: #2196f3; /* Blue */
+            --proto-design: #00bcd4; /* Cyan */
+            --proto-build: #4caf50; /* Green */
+            --proto-migration: #9c27b0; /* Purple */
+            --proto-testing: #8bc34a; /* Light Green */
+            --proto-go_live: #2ecc71; /* Emerald Green */
+            --proto-support: #ff9800; /* Orange */
+            --proto-decommission: #795548; /* Brown */
+            --proto-monitoring: #607d8b; /* Blue Grey */
+            --proto-risk: #e74c3c; /* Red */
+            --proto-issue: #ef5350; /* Red */
+            --proto-escalation: #d32f2f; /* Dark Red */
+            --proto-resolution: #43a047; /* Dark Green */
+            --proto-replan: #f1c40f; /* Yellow */
+            --proto-success: #4CAF50; /* Green */
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars due to animations */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 2000px; /* Wider to accommodate sidebars + canvas */
+            margin: 20px auto;
+            padding: 0 20px; /* Adjust padding for sidebars */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: var(--header-bg);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, var(--active-red) 0%, var(--active-orange) 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn.active:hover {
+            box-shadow: 0 12px 30px rgba(255, 107, 107, 0.8);
+        }
+
+        /* Main Content Area (canvas and sidebars) */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+            position: relative; /* For proper positioning of sticky sidebars */
+        }
+
+        /* Sidebars */
+        .left-sidebar, .right-sidebar {
+            width: 250px;
+            min-width: 250px; /* Fixed width for sidebars */
+            max-height: calc(100vh - 40px); /* Limit height to viewport, considering body padding */
+            overflow-y: auto; /* Scroll if content overflows */
+            background: var(--sidebar-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: sticky; /* Sticky positioning within .main-content */
+            top: 20px; /* Distance from top of viewport */
+        }
+
+        .left-sidebar {
+            order: 1; /* Left side */
+        }
+
+        .right-sidebar {
+            order: 3; /* Right side */
+        }
+
+        /* Legend within Left Sidebar */
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column initially */
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Stats within Right Sidebar */
+        .stats h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .stats div:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .status-text {
+            color: var(--ready-status);
+            font-weight: bold;
+        }
+        .protocol-badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: flex-end; /* Align badges to the right */
+        }
+        .protocol-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+
+        /* Network Canvas */
+        .network-canvas {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            height: 750px; /* Adjusted height for 7 swimlanes */
+            background: var(--canvas-bg);
+            border: 2px solid var(--canvas-border);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            order: 2; /* Middle position */
+        }
+
+        /* Swimlane Styles */
+        .swimlane {
+            position: absolute;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .swimlane-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--bg-darker);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        /* Specific Swimlane Positioning within the canvas */
+        /* All swimlanes made very wide to spread out devices and labels */
+        #project-governance-strategy-swimlane { top: 20px; left: 20px; width: 1600px; height: 100px; }
+        #planning-design-swimlane { top: 135px; left: 20px; width: 1600px; height: 100px; } /* 20 + 100 + 15 = 135 */
+        #infrastructure-platform-teams-swimlane { top: 250px; left: 20px; width: 1600px; height: 100px; } /* 135 + 100 + 15 = 250 */
+        #migration-execution-swimlane { top: 365px; left: 20px; width: 1600px; height: 100px; } /* 250 + 100 + 15 = 365 */
+        #testing-validation-swimlane { top: 480px; left: 20px; width: 1600px; height: 100px; } /* 365 + 100 + 15 = 480 */
+        #user-adoption-support-swimlane { top: 595px; left: 20px; width: 1600px; height: 100px; } /* 480 + 100 + 15 = 595 */
+        #operations-optimization-swimlane { top: 710px; left: 20px; width: 1600px; height: 100px; } /* 595 + 100 + 15 = 710 */
+
+
+        /* Device Styles */
+        .device {
+            position: absolute;
+            width: 100px; /* Standardized small width */
+            height: 50px; /* Standardized small height */
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .device:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            z-index: 11;
+        }
+
+        .device-icon {
+            font-size: 20px; /* Standardized small font size */
+            margin-bottom: 3px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .device-name {
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Connection Styles */
+        .connection {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            height: 2px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+            z-index: 5; /* Ensure connections are below labels */
+        }
+
+        .connection-label {
+            position: absolute;
+            left: 50%;
+            top: -20px; /* Position above the line */
+            transform: translateX(-50%);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            color: var(--text-light);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.8); /* Stronger background for readability */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 25; /* CRITICAL: Ensure labels are on top of everything else */
+        }
+
+        /* Packet Styles */
+        .packet {
+            position: absolute;
+            width: 20px; /* Standardized small width */
+            height: 20px; /* Standardized small height */
+            border-radius: 50%;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 15;
+            animation: pulse 1.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Responsive adjustments for large screens */
+        @media (min-width: 1801px) {
+            .network-canvas { height: 830px; } /* Adjust canvas height to fit */
+
+            #project-governance-strategy-swimlane { top: 20px; left: 20px; width: 1600px; height: 100px; }
+            #planning-design-swimlane { top: 135px; left: 20px; width: 1600px; height: 100px; }
+            #infrastructure-platform-teams-swimlane { top: 250px; left: 20px; width: 1600px; height: 100px; }
+            #migration-execution-swimlane { top: 365px; left: 20px; width: 1600px; height: 100px; }
+            #testing-validation-swimlane { top: 480px; left: 20px; width: 1600px; height: 100px; }
+            #user-adoption-support-swimlane { top: 595px; left: 20px; width: 1600px; height: 100px; }
+            #operations-optimization-swimlane { top: 710px; left: 20px; width: 1600px; height: 100px; }
+
+
+            /* Device Y positions (centered at swimlane.top + 25) */
+            #project_sponsor { x: 50px; y: 45px; }
+            #project_manager { x: 250px; y: 45px; }
+            #project_charter { x: 450px; y: 45px; }
+
+            #solution_architect { x: 50px; y: 160px; }
+            #design_documents { x: 250px; y: 160px; }
+            #migration_plan { x: 450px; y: 160px; }
+
+            #ad_engineers { x: 50px; y: 275px; }
+            #network_engineers { x: 250px; y: 275px; }
+            #server_engineers { x: 450px; y: 275px; }
+
+            #old_ad_domain { x: 50px; y: 390px; }
+            #new_ad_domain { x: 250px; y: 390px; }
+            #migration_tool { x: 450px; y: 390px; }
+
+            #qa_testers { x: 50px; y: 505px; }
+            #test_environment { x: 250px; y: 505px; }
+            #production_environment { x: 450px; y: 505px; }
+            #application_teams { x: 650px; y: 505px; }
+
+            #help_desk { x: 50px; y: 620px; }
+            #end_users { x: 250px; y: 620px; }
+            #training_portal { x: 450px; y: 620px; }
+
+            #monitoring_tools { x: 50px; y: 735px; }
+            #ticketing_system { x: 250px; y: 735px; }
+            #project_status_dashboard { x: 450px; y: 735px; }
+        }
+
+
+        @media (max-width: 1800px) {
+            .container { max-width: 98%; padding: 0 10px; }
+            .left-sidebar, .right-sidebar { width: 220px; min-width: 220px; }
+            .network-canvas { height: 830px; } /* Adjusted height to fit 7 swimlanes */
+
+            #project-governance-strategy-swimlane, #planning-design-swimlane, #infrastructure-platform-teams-swimlane,
+            #migration-execution-swimlane, #testing-validation-swimlane, #user-adoption-support-swimlane, #operations-optimization-swimlane {
+                width: 1200px; /* Reduced width */
+                height: 100px; /* Consistent height for this breakpoint, with 15px gap */
+            }
+
+            /* Adjust top positions */
+            #project-governance-strategy-swimlane { top: 20px; left: 20px; }
+            #planning-design-swimlane { top: 135px; left: 20px; } /* 20 + 100 + 15 = 135 */
+            #infrastructure-platform-teams-swimlane { top: 250px; left: 20px; } /* 135 + 100 + 15 = 250 */
+            #migration-execution-swimlane { top: 365px; left: 20px; } /* 250 + 100 + 15 = 365 */
+            #testing-validation-swimlane { top: 480px; left: 20px; } /* 365 + 100 + 15 = 480 */
+            #user-adoption-support-swimlane { top: 595px; left: 20px; } /* 480 + 100 + 15 = 595 */
+            #operations-optimization-swimlane { top: 710px; left: 20px; } /* 595 + 100 + 15 = 710 */
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (100 - 50) / 2 = swimlane.top + 25 */
+            #project_sponsor { x: 50px; y: 45px; }
+            #project_manager { x: 250px; y: 45px; }
+            #project_charter { x: 450px; y: 45px; }
+
+            #solution_architect { x: 50px; y: 160px; }
+            #design_documents { x: 250px; y: 160px; }
+            #migration_plan { x: 450px; y: 160px; }
+
+            #ad_engineers { x: 50px; y: 275px; }
+            #network_engineers { x: 250px; y: 275px; }
+            #server_engineers { x: 450px; y: 275px; }
+
+            #old_ad_domain { x: 50px; y: 390px; }
+            #new_ad_domain { x: 250px; y: 390px; }
+            #migration_tool { x: 450px; y: 390px; }
+
+            #qa_testers { x: 50px; y: 505px; }
+            #test_environment { x: 250px; y: 505px; }
+            #production_environment { x: 450px; y: 505px; }
+            #application_teams { x: 650px; y: 505px; }
+
+            #help_desk { x: 50px; y: 620px; }
+            #end_users { x: 250px; y: 620px; }
+            #training_portal { x: 450px; y: 620px; }
+
+            #monitoring_tools { x: 50px; y: 735px; }
+            #ticketing_system { x: 250px; y: 735px; }
+            #project_status_dashboard { x: 450px; y: 735px; }
+        }
+
+        @media (max-width: 1400px) {
+            .left-sidebar, .right-sidebar { width: 180px; min-width: 180px; }
+            .network-canvas { height: 830px; } /* Consistent height */
+
+            #project-governance-strategy-swimlane, #planning-design-swimlane, #infrastructure-platform-teams-swimlane,
+            #migration-execution-swimlane, #testing-validation-swimlane, #user-adoption-support-swimlane, #operations-optimization-swimlane {
+                width: 800px; /* Further reduced width */
+                height: 100px; /* Back to 100px height with 10px gaps for this breakpoint */
+            }
+
+            /* Adjust top positions */
+            #project-governance-strategy-swimlane { top: 20px; left: 20px; }
+            #planning-design-swimlane { top: 130px; left: 20px; } /* 20 + 100 + 10 = 130 */
+            #infrastructure-platform-teams-swimlane { top: 240px; left: 20px; } /* 130 + 100 + 10 = 240 */
+            #migration-execution-swimlane { top: 350px; left: 20px; } /* 240 + 100 + 10 = 350 */
+            #testing-validation-swimlane { top: 460px; left: 20px; } /* 350 + 100 + 10 = 460 */
+            #user-adoption-support-swimlane { top: 570px; left: 20px; } /* 460 + 100 + 10 = 570 */
+            #operations-optimization-swimlane { top: 680px; left: 20px; } /* 570 + 100 + 10 = 680 */
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (100 - 50) / 2 = swimlane.top + 25 */
+            #project_sponsor { x: 40px; y: 45px; }
+            #project_manager { x: 170px; y: 45px; }
+            #project_charter { x: 300px; y: 45px; }
+
+            #solution_architect { x: 40px; y: 155px; }
+            #design_documents { x: 170px; y: 155px; }
+            #migration_plan { x: 300px; y: 155px; }
+
+            #ad_engineers { x: 40px; y: 265px; }
+            #network_engineers { x: 170px; y: 265px; }
+            #server_engineers { x: 300px; y: 265px; }
+
+            #old_ad_domain { x: 40px; y: 375px; }
+            #new_ad_domain { x: 170px; y: 375px; }
+            #migration_tool { x: 300px; y: 375px; }
+
+            #qa_testers { x: 40px; y: 485px; }
+            #test_environment { x: 170px; y: 485px; }
+            #production_environment { x: 300px; y: 485px; }
+            #application_teams { x: 430px; y: 485px; }
+
+            #help_desk { x: 40px; y: 595px; }
+            #end_users { x: 170px; y: 595px; }
+            #training_portal { x: 300px; y: 595px; }
+
+            #monitoring_tools { x: 40px; y: 705px; }
+            #ticketing_system { x: 170px; y: 705px; }
+            #project_status_dashboard { x: 300px; y: 705px; }
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column; /* Stack sidebars and canvas */
+                gap: 15px;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%; /* Full width when stacked */
+                position: static; /* Remove sticky behavior */
+                max-height: 200px; /* Limit height when stacked */
+                padding: 10px;
+            }
+            .right-sidebar { order: 1; } /* Stats on top when stacked */
+            .left-sidebar { order: 3; } /* Legend on bottom when stacked */
+            .network-canvas {
+                order: 2; /* Canvas in middle */
+                height: 550px; /* Reduce canvas height */
+            }
+
+            /* Adjust swimlanes for smaller canvas */
+            .swimlane {
+                position: relative; /* Make them flow naturally within canvas */
+                top: auto; left: auto;
+                width: calc(100% - 40px); /* Full width minus padding */
+                height: auto;
+                margin: 10px auto; /* Center them */
+                padding: 10px;
+            }
+            .swimlane-label { top: -12px; left: 10px; font-size: 0.9em; padding: 3px 10px; }
+
+            /* Adjust devices within stacked swimlanes */
+            .device {
+                position: relative;
+                top: auto; left: auto;
+                margin: 10px auto; /* Center devices within swimlane */
+                display: flex;
+            }
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columns on wider small screens */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .header p { font-size: 0.9em; }
+            .controls { gap: 8px; }
+            .btn { padding: 8px 15px; font-size: 0.8em; }
+            .network-canvas { height: 450px; }
+            .device { width: 90px; height: 45px; }
+            .device-icon { font-size: 18px; }
+            .device-name { font-size: 9px; }
+            .legend-grid {
+                grid-template-columns: 1fr; /* Single column on very small screens */
+            }
+            .protocol-badges-container { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>IT Project: Active Directory Migration Simulation 🚀</h1>
+            <p>From Planning to Go-Live: Understanding Traditional IT Project Management</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="ad_migration_project_flowBtn" onclick="NetworkAnimator.startAnimation('ad_migration_project_flow')" aria-label="Simulate a Standard AD Migration Project">🏃‍♂️ Standard Migration</button>
+            <button class="btn" id="ad_migration_technical_blockersBtn" onclick="NetworkAnimator.startAnimation('ad_migration_technical_blockers')" aria-label="Simulate Technical Blockers in AD Migration">🚧 Tech Blockers</button>
+            <button class="btn" id="ad_migration_scope_creepBtn" onclick="NetworkAnimator.startAnimation('ad_migration_scope_creep')" aria-label="Simulate Scope Creep in AD Migration">➕ Scope Creep</button>
+            <button class="btn" id="ad_migration_budget_overrunBtn" onclick="NetworkAnimator.startAnimation('ad_migration_budget_overrun')" aria-label="Simulate Budget Overrun in AD Migration">💸 Budget Overrun</button>
+            <button class="btn" id="ad_migration_resource_constraintsBtn" onclick="NetworkAnimator.startAnimation('ad_migration_resource_constraints')" aria-label="Simulate Resource Constraints in AD Migration">👥 Resource Issue</button>
+            <button class="btn" id="ad_migration_successful_completionBtn" onclick="NetworkAnimator.startAnimation('ad_migration_successful_completion')" aria-label="Simulate a Successful AD Migration">🎉 Success</button>
+            <button class="btn" id="full_topologyBtn" onclick="NetworkAnimator.startAnimation('full_topology')" aria-label="Show Full Project Topology">🗺️ Full Topology</button>
+            <button class="btn" id="stopBtn" onclick="NetworkAnimator.stopAnimation()" aria-label="Stop Animation">⏹️ Stop</button>
+            <button class="btn" id="exportBtn" onclick="NetworkAnimator.exportToCSV()" aria-label="Export to CSV">💾 Export CSV</button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="legend" id="legend">
+                    <h3>Protocol/Action Legend</h3>
+                    <div class="legend-grid">
+                        <!-- Legend items will be created dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-canvas" id="networkCanvas">
+                <!-- Swimlanes -->
+                <div id="project-governance-strategy-swimlane" class="swimlane">
+                    <span class="swimlane-label">Project Governance & Strategy</span>
+                </div>
+                <div id="planning-design-swimlane" class="swimlane">
+                    <span class="swimlane-label">Planning & Design</span>
+                </div>
+                <div id="infrastructure-platform-teams-swimlane" class="swimlane">
+                    <span class="swimlane-label">Infrastructure & Platform Teams</span>
+                </div>
+                <div id="migration-execution-swimlane" class="swimlane">
+                    <span class="swimlane-label">Migration Execution</span>
+                </div>
+                <div id="testing-validation-swimlane" class="swimlane">
+                    <span class="swimlane-label">Testing & Validation</span>
+                </div>
+                <div id="user-adoption-support-swimlane" class="swimlane">
+                    <span class="swimlane-label">User Adoption & Support</span>
+                </div>
+                <div id="operations-optimization-swimlane" class="swimlane">
+                    <span class="swimlane-label">Operations & Optimization</span>
+                </div>
+
+                <!-- Devices and connections will be created dynamically -->
+            </div>
+
+            <div class="right-sidebar">
+                <div class="stats" id="stats">
+                    <h3>Project Stats</h3>
+                    <div>Project Phase: <span id="projectPhase">Initiating</span></div>
+                    <div>Migration Progress: <span id="migrationProgress">0%</span></div>
+                    <div>Budget Status: <span id="budgetStatus" class="status-text">On Track</span></div>
+                    <div>Risk Level: <span id="riskLevel" class="status-text">Low</span></div>
+                    <div>Issues Open: <span id="issuesOpen">0</span></div>
+                    <div>Legacy AD Decommissioned: <span id="legacyADDecommissioned">No</span></div>
+                    <div>Project Health: <span id="projectHealth" class="status-text">Good</span></div>
+                    <div>Active Protocols:</div>
+                    <div id="protocolBadges" class="protocol-badges-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @namespace NetworkAnimator
+         * @description Manages the network animation and visualization for IT Project: AD Migration Simulation.
+         */
+        const NetworkAnimator = (() => {
+            // --- Configuration ---
+            const config = {
+                devices: {
+                    // Project Governance & Strategy
+                    project_sponsor: { symbol: "👑", name: "Project Sponsor", x: 50, y: 45, color: "var(--color-governance)", type: "Role" },
+                    project_manager: { symbol: "👨‍💼", name: "Project Manager", x: 250, y: 45, color: "var(--color-pm)", type: "Role" },
+                    project_charter: { symbol: "📜", name: "Project Charter", x: 450, y: 45, color: "var(--color-charter)", type: "Artifact" },
+
+                    // Planning & Design
+                    solution_architect: { symbol: "💡", name: "Solution Architect", x: 50, y: 160, color: "var(--color-architect)", type: "Role" },
+                    design_documents: { symbol: "📝", name: "Design Documents", x: 250, y: 160, color: "var(--color-design)", type: "Artifact" },
+                    migration_plan: { symbol: "🗺️", name: "Migration Plan", x: 450, y: 160, color: "var(--color-plan)", type: "Artifact" },
+
+                    // Infrastructure & Platform Teams
+                    ad_engineers: { symbol: "🔑", name: "AD Engineers", x: 50, y: 275, color: "var(--color-ad)", type: "Team" },
+                    network_engineers: { symbol: "🔌", name: "Network Engineers", x: 250, y: 275, color: "var(--color-network)", type: "Team" },
+                    server_engineers: { symbol: "🖥️", name: "Server Engineers", x: 450, y: 275, color: "var(--color-server)", type: "Team" },
+
+                    // Migration Execution
+                    old_ad_domain: { symbol: "👴", name: "Old AD Domain", x: 50, y: 390, color: "var(--color-old-ad)", type: "System" },
+                    new_ad_domain: { symbol: "🌟", name: "New AD Domain", x: 250, y: 390, color: "var(--color-new-ad)", type: "System" },
+                    migration_tool: { symbol: "🔄", name: "Migration Tool", x: 450, y: 390, color: "var(--color-migration-tool)", type: "Tool" },
+
+                    // Testing & Validation
+                    qa_testers: { symbol: "🐞", name: "QA Testers", x: 50, y: 505, color: "var(--color-qa)", type: "Role" },
+                    test_environment: { symbol: "🧪", name: "Test Environment", x: 250, y: 505, color: "var(--color-env)", type: "Environment" },
+                    production_environment: { symbol: "🌐", name: "Production Environment", x: 450, y: 505, color: "var(--color-env)", type: "Environment" },
+                    application_teams: { symbol: "⚙️", name: "Application Teams", x: 650, y: 505, color: "var(--color-app)", type: "Team" },
+
+                    // User Adoption & Support
+                    help_desk: { symbol: "📞", name: "Help Desk", x: 50, y: 620, color: "var(--color-helpdesk)", type: "Team" },
+                    end_users: { symbol: "🧑‍💻", name: "End-Users", x: 250, y: 620, color: "var(--color-user)", type: "User" },
+                    training_portal: { symbol: "🎓", name: "Training Portal", x: 450, y: 620, color: "var(--color-training)", type: "System" },
+
+                    // Operations & Optimization
+                    monitoring_tools: { symbol: "📈", name: "Monitoring Tools", x: 50, y: 735, color: "var(--color-monitor)", type: "System" },
+                    ticketing_system: { symbol: "🎫", name: "Ticketing System", x: 250, y: 735, color: "var(--color-ticketing)", type: "System" },
+                    project_status_dashboard: { symbol: "📊", name: "Project Status Dashboard", x: 450, y: 735, color: "var(--color-dashboard)", type: "Metric" }
+                },
+                flows: {
+                    full_topology: {
+                        description: "Full AD Migration Project Topology (Static View)",
+                        sequence: [
+                            { from: "project_sponsor", to: "project_manager", protocol: "Project Mandate", color: "var(--proto-initiation)", packet: "👍" },
+                            { from: "project_manager", to: "project_charter", protocol: "Formalize Project", color: "var(--proto-initiation)", packet: "📜" },
+
+                            { from: "project_manager", to: "solution_architect", protocol: "Requirements Gathering", color: "var(--proto-planning)", packet: "📋" },
+                            { from: "solution_architect", to: "design_documents", protocol: "Produce HLD/LLD", color: "var(--proto-design)", packet: "📝" },
+                            { from: "design_documents", to: "ad_engineers", protocol: "Technical Review", color: "var(--proto-design)", packet: "🔎" },
+                            { from: "project_manager", to: "migration_plan", protocol: "Develop Strategy", color: "var(--proto-planning)", packet: "🗺️" },
+
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "Build New AD", color: "var(--proto-build)", packet: "🔑" },
+                            { from: "network_engineers", to: "new_ad_domain", protocol: "Network Prep", color: "var(--proto-build)", packet: "🔌" },
+                            { from: "server_engineers", to: "new_ad_domain", protocol: "Server Provisioning", color: "var(--proto-build)", packet: "🖥️" },
+
+                            { from: "ad_engineers", to: "migration_tool", protocol: "Tool Configuration", color: "var(--proto-migration)", packet: "⚙️" },
+                            { from: "migration_tool", to: "old_ad_domain", protocol: "Read Objects", color: "var(--proto-migration)", packet: "⬇️" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Migrate Objects", color: "var(--proto-migration)", packet: "⬆️" },
+
+                            { from: "qa_testers", to: "test_environment", protocol: "Execute Tests", color: "var(--proto-testing)", packet: "🐞" },
+                            { from: "application_teams", to: "production_environment", protocol: "App Compatibility", color: "var(--proto-testing)", packet: "✔️" },
+                            { from: "help_desk", to: "training_portal", protocol: "Develop Training", color: "var(--proto-support)", packet: "🎓" },
+                            { from: "end_users", to: "new_ad_domain", protocol: "User Login", color: "var(--proto-go_live)", packet: "🧑‍💻" },
+
+                            { from: "monitoring_tools", to: "new_ad_domain", protocol: "Health Monitoring", color: "var(--proto-monitoring)", packet: "📈" },
+                            { from: "help_desk", to: "ticketing_system", protocol: "Log Issues", color: "var(--proto-support)", packet: "🎫" },
+                            { from: "project_manager", to: "project_status_dashboard", protocol: "Report Progress", color: "var(--proto-monitoring)", packet: "📊" },
+                            { from: "ad_engineers", to: "old_ad_domain", protocol: "Decommission", color: "var(--proto-decommission)", packet: "🗑️" }
+                        ]
+                    },
+                    ad_migration_project_flow: {
+                        description: "Standard AD Migration Project: Full Lifecycle",
+                        sequence: [
+                            // 1. Project Initiation
+                            { from: "project_sponsor", to: "project_manager", protocol: "Approve Project Charter", color: "var(--proto-initiation)", packet: "👍", projectPhaseChange: "Initiating", projectHealthChange: "Good" },
+                            { from: "project_manager", to: "project_charter", protocol: "Project Kick-off & Stakeholder Alignment", color: "var(--proto-initiation)", packet: "📜" },
+
+                            // 2. Planning & Design
+                            { from: "project_manager", to: "solution_architect", protocol: "Gather Requirements for New AD", color: "var(--proto-planning)", packet: "📋", projectPhaseChange: "Planning & Design" },
+                            { from: "solution_architect", to: "design_documents", protocol: "Produce High-Level Design (HLD)", color: "var(--proto-design)", packet: "📝" },
+                            { from: "ad_engineers", to: "design_documents", protocol: "Develop Low-Level Design (LLD)", color: "var(--proto-design)", packet: "🔎" },
+                            { from: "project_manager", to: "migration_plan", protocol: "Create Detailed Migration Strategy", color: "var(--proto-planning)", packet: "🗺️" },
+
+                            // 3. Infrastructure & Platform Build
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "Build New AD Domain Controllers", color: "var(--proto-build)", packet: "🔑", projectPhaseChange: "Build New AD" },
+                            { from: "network_engineers", to: "new_ad_domain", protocol: "Configure Network Connectivity", color: "var(--proto-build)", packet: "🔌" },
+                            { from: "server_engineers", to: "new_ad_domain", protocol: "Provision Member Servers", color: "var(--proto-build)", packet: "🖥️" },
+
+                            // 4. Pilot Migration & Testing
+                            { from: "ad_engineers", to: "migration_tool", protocol: "Configure Migration Tool (Pilot Group)", color: "var(--proto-migration)", packet: "⚙️", projectPhaseChange: "Pilot Migration" },
+                            { from: "migration_tool", to: "old_ad_domain", protocol: "Sync Pilot Users/Groups", color: "var(--proto-migration)", packet: "⬇️" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Migrate Pilot Users (10%)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 10 },
+                            { from: "qa_testers", to: "test_environment", protocol: "Test Pilot Functionality", color: "var(--proto-testing)", packet: "🐞" },
+                            { from: "help_desk", to: "end_users", protocol: "Gather Pilot User Feedback", color: "var(--proto-support)", packet: "💬" },
+
+                            // 5. Batch Migrations (Iterative)
+                            { from: "project_manager", to: "migration_plan", protocol: "Schedule Production Batch 1", color: "var(--proto-planning)", packet: "📅", projectPhaseChange: "Production Migration" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Migrate Production Batch 1 (30%)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 30 },
+                            { from: "application_teams", to: "production_environment", protocol: "Remediate Applications Post-Migration", color: "var(--proto-testing)", packet: "⚙️" },
+                            { from: "project_manager", to: "migration_plan", protocol: "Schedule Production Batch 2", color: "var(--proto-planning)", packet: "📅" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Migrate Production Batch 2 (50%)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 50 },
+
+                            // 6. Final Testing & Go-Live
+                            { from: "qa_testers", to: "production_environment", protocol: "Final UAT & Performance Testing", color: "var(--proto-testing)", packet: "✔️", projectPhaseChange: "Go-Live" },
+                            { from: "project_sponsor", to: "project_manager", protocol: "Authorize Go-Live", color: "var(--proto-initiation)", packet: "✅" },
+                            { from: "help_desk", to: "training_portal", protocol: "Provide End-User Training & Support", color: "var(--proto-support)", packet: "🎓" },
+                            { from: "end_users", to: "new_ad_domain", protocol: "Successful User Login (100% Migrated)", color: "var(--proto-go_live)", packet: "🧑‍💻", migrationProgressChange: 10, projectHealthChange: "Good" },
+
+                            // 7. Post-Migration & Decommission
+                            { from: "monitoring_tools", to: "new_ad_domain", protocol: "Continuous Health Monitoring", color: "var(--proto-monitoring)", packet: "📈", projectPhaseChange: "Post-Migration" },
+                            { from: "help_desk", to: "ticketing_system", protocol: "Manage Post-Migration Support Issues", color: "var(--proto-support)", packet: "🎫" },
+                            { from: "ad_engineers", to: "old_ad_domain", protocol: "Decommission Old AD Environment", color: "var(--proto-decommission)", packet: "🗑️", legacyADDecommissionedChange: "Yes" },
+                            { from: "project_manager", to: "project_status_dashboard", protocol: "Project Closure & Final Report", color: "var(--proto-success)", packet: "📊", projectPhaseChange: "Closed", projectHealthChange: "Completed" },
+                            { from: "project_sponsor", to: "project_manager", protocol: "Project Completion Sign-off", color: "var(--proto-success)", packet: "🏆" }
+                        ]
+                    },
+                    ad_migration_technical_blockers: {
+                        description: "Scenario 1: Technical Blockers (Legacy App Incompatibility)",
+                        sequence: [
+                            // Initial Planning
+                            { from: "project_manager", to: "solution_architect", protocol: "Initial Requirements (Legacy App Integration)", color: "var(--proto-planning)", packet: "📋", projectPhaseChange: "Planning & Design", projectHealthChange: "Good" },
+                            { from: "solution_architect", to: "design_documents", protocol: "Design Approved (Initial Assumptions)", color: "var(--proto-design)", packet: "📝" },
+
+                            // Pilot Migration Phase
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "New AD Build Complete", color: "var(--proto-build)", packet: "🔑" },
+                            { from: "ad_engineers", to: "migration_tool", protocol: "Prepare Pilot Migration", color: "var(--proto-migration)", packet: "⚙️", projectPhaseChange: "Pilot Migration" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Migrate Pilot Users (10%)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 10 },
+                            { from: "qa_testers", to: "test_environment", protocol: "Pilot Testing Initiated", color: "var(--proto-testing)", packet: "🐞" },
+
+                            // Technical Blocker Discovered
+                            { from: "application_teams", to: "qa_testers", protocol: "Report: Legacy App A Fails in New AD", color: "var(--proto-issue)", packet: "❌", projectHealthChange: "Warning", issuesOpenChange: 1, riskLevelChange: "Medium" },
+                            { from: "qa_testers", to: "project_manager", protocol: "Escalate Critical Technical Blocker", color: "var(--proto-escalation)", packet: "🛑" },
+                            { from: "project_manager", to: "solution_architect", protocol: "Request Technical Investigation", color: "var(--proto-investigation)", packet: "🔎" },
+
+                            // Investigation & Re-design
+                            { from: "solution_architect", to: "application_teams", protocol: "Root Cause: Incompatible Authentication Protocol", color: "var(--proto-issue)", packet: "⁉️" },
+                            { from: "solution_architect", to: "design_documents", protocol: "Rework Design for Legacy App A", color: "var(--proto-replan)", packet: "📝", projectHealthChange: "Warning" },
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "Implement Design Changes (AD/GPO Adjustments)", color: "var(--proto-build)", packet: "🛠️" },
+
+                            // Re-testing & Resolution
+                            { from: "qa_testers", to: "test_environment", protocol: "Re-Test Legacy App A", color: "var(--proto-testing)", packet: "✔️" },
+                            { from: "application_teams", to: "qa_testers", protocol: "App A Functionality Verified", color: "var(--proto-resolution)", packet: "✅", issuesOpenChange: -1 },
+                            { from: "project_manager", to: "project_status_dashboard", protocol: "Update Status: Blocker Resolved", color: "var(--proto-success)", packet: "📊", projectHealthChange: "Good", riskLevelChange: "Low" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Resume Batch Migrations", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 10 }
+                        ]
+                    },
+                    ad_migration_scope_creep: {
+                        description: "Scenario 2: Scope Creep (New Security Requirements)",
+                        sequence: [
+                            // Project Mid-Migration
+                            { from: "project_manager", to: "migration_plan", protocol: "Migration in Progress (50% Complete)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 50, projectPhaseChange: "Production Migration", projectHealthChange: "Good" },
+
+                            // Scope Creep Introduction
+                            { from: "project_sponsor", to: "project_manager", protocol: "Request: Enhanced Security Groups for new compliance", color: "var(--proto-issue)", packet: "➕" },
+                            { from: "project_manager", to: "ad_engineers", protocol: "Assess Impact of New Scope", color: "var(--proto-planning)", packet: "🔎" },
+                            { from: "ad_engineers", to: "project_manager", protocol: "Impact Report: +2 Weeks, +$X, Requires Re-work", color: "var(--proto-escalation)", packet: "💸", projectHealthChange: "Warning", riskLevelChange: "Medium" },
+
+                            // Negotiation & Re-planning
+                            { from: "project_manager", to: "project_sponsor", protocol: "Present Options: Delay, Reduce Scope, Increase Budget", color: "var(--proto-replan)", packet: "💬" },
+                            { from: "project_sponsor", to: "project_manager", protocol: "Decision: Integrate, Extend Timeline by 2 Weeks", color: "var(--proto-resolution)", packet: "✅" },
+                            { from: "project_manager", to: "migration_plan", protocol: "Update Migration Plan & Schedule", color: "var(--proto-replan)", packet: "🗺️" },
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "Implement New Security Group Design", color: "var(--proto-build)", packet: "🛠️" },
+
+                            // Project Resumes with New Scope
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Continue Migration (Adjusted Plan)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 50 },
+                            { from: "project_manager", to: "project_status_dashboard", protocol: "Update Status: Scope Managed, New Baseline", color: "var(--proto-success)", packet: "📊", projectHealthChange: "Good" }
+                        ]
+                    },
+                    ad_migration_budget_overrun: {
+                        description: "Scenario 3: Budget Overrun (Unexpected License Costs)",
+                        sequence: [
+                            // Project Planning Phase
+                            { from: "project_manager", to: "project_charter", protocol: "Budget Approved ($1M)", color: "var(--proto-initiation)", packet: "💰", projectPhaseChange: "Planning & Design", budgetStatusChange: "On Track", projectHealthChange: "Good" },
+                            { from: "solution_architect", to: "design_documents", protocol: "Architectural Design Complete", color: "var(--proto-design)", packet: "📝" },
+
+                            // During Implementation
+                            { from: "ad_engineers", to: "migration_tool", protocol: "Tool Procurement & Licensing", color: "var(--proto-build)", packet: "⚙️" },
+                            { from: "migration_tool", to: "project_manager", protocol: "Alert: Unexpected High License Cost for Feature X", color: "var(--proto-issue)", packet: "💸", budgetStatusChange: "Warning", projectHealthChange: "Warning", riskLevelChange: "Medium" },
+                            { from: "project_manager", to: "project_sponsor", protocol: "Escalate Budget Overrun Risk", color: "var(--proto-escalation)", packet: "❗" },
+
+                            // Decision & Resolution
+                            { from: "project_sponsor", to: "project_manager", protocol: "Options: New Vendor, Reduce Scope, Additional Funds", color: "var(--proto-replan)", packet: "🤝" },
+                            { from: "project_manager", to: "project_sponsor", protocol: "Decision: Secure Additional Funds ($100K)", color: "var(--proto-resolution)", packet: "✅", budgetStatusChange: "Overrun" },
+                            { from: "project_manager", to: "project_status_dashboard", protocol: "Update Status: Budget Revised, Project Continues", color: "var(--proto-success)", packet: "📊", projectHealthChange: "Good" },
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "Proceed with New AD Build", color: "var(--proto-build)", packet: "🔑" }
+                        ]
+                    },
+                    ad_migration_resource_constraints: {
+                        description: "Scenario 4: Resource Constraints (Key Engineer Leaves)",
+                        sequence: [
+                            // Project Mid-Build Phase
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "New AD Build in Progress (70% Complete)", color: "var(--proto-build)", packet: "🔑", projectPhaseChange: "Build New AD", projectHealthChange: "Good" },
+
+                            // Critical Resource Departure
+                            { from: "ad_engineers", to: "project_manager", protocol: "Key AD Engineer Resigns", color: "var(--proto-issue)", packet: "🚪", projectHealthChange: "Critical", riskLevelChange: "High", issuesOpenChange: 1 },
+                            { from: "project_manager", to: "project_sponsor", protocol: "Escalate Critical Resource Loss", color: "var(--proto-escalation)", packet: "❗" },
+                            { from: "project_manager", to: "ad_engineers", protocol: "Re-assign Tasks, Impact Assessment", color: "var(--proto-replan)", packet: "📋" },
+                            { from: "ad_engineers", to: "project_manager", protocol: "Impact: Build Delayed by 3 Weeks, High Risk", color: "var(--proto-issue)", packet: "⏰" },
+
+                            // Mitigation & Resolution
+                            { from: "project_manager", to: "project_sponsor", protocol: "Decision: Hire Contractor, Cross-Train Existing Staff", color: "var(--proto-resolution)", packet: "🤝" },
+                            { from: "project_manager", to: "ad_engineers", protocol: "Onboard & Train New Contractor", color: "var(--proto-planning)", packet: "🎓" },
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "Resume Build with New Team Structure", color: "var(--proto-build)", packet: "🛠️" },
+                            { from: "project_manager", to: "project_status_dashboard", protocol: "Update Status: Resource Issue Mitigated, Project Recovering", color: "var(--proto-success)", packet: "📊", projectHealthChange: "Warning", issuesOpenChange: -1, riskLevelChange: "Medium" }
+                        ]
+                    },
+                    ad_migration_successful_completion: {
+                        description: "Scenario 5: Successful AD Migration Project Completion",
+                        sequence: [
+                            // Start of project - smooth sailing
+                            { from: "project_sponsor", to: "project_manager", protocol: "Project Approved & Funded", color: "var(--proto-initiation)", packet: "🏆", projectPhaseChange: "Initiating", projectHealthChange: "Good", migrationProgressChange: 0, budgetStatusChange: "On Track", riskLevelChange: "Low", issuesOpenChange: 0, legacyADDecommissionedChange: "No" },
+                            { from: "project_manager", to: "migration_plan", protocol: "Well-Defined Project Plan", color: "var(--proto-planning)", packet: "🗺️" },
+
+                            // Key Phases Executed Successfully
+                            { from: "ad_engineers", to: "new_ad_domain", protocol: "New AD Built to Spec", color: "var(--proto-build)", packet: "🔑", projectPhaseChange: "Build New AD" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Pilot Migration Successful (10%)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 10 },
+                            { from: "qa_testers", to: "test_environment", protocol: "All Tests Pass in Pilot", color: "var(--proto-testing)", packet: "✅" },
+                            { from: "migration_tool", to: "new_ad_domain", protocol: "Phased Migration Complete (90%)", color: "var(--proto-migration)", packet: "⬆️", migrationProgressChange: 80, projectPhaseChange: "Production Migration" },
+                            { from: "application_teams", to: "production_environment", protocol: "All Applications Remediated", color: "var(--proto-testing)", packet: "✔️" },
+
+                            // Go-Live and Post-Migration
+                            { from: "project_sponsor", to: "project_manager", protocol: "Go-Live Approved Ahead of Schedule", color: "var(--proto-go_live)", packet: "🚀", projectPhaseChange: "Go-Live" },
+                            { from: "end_users", to: "new_ad_domain", protocol: "Smooth User Transition (100% Migrated)", color: "var(--proto-go_live)", packet: "😊", migrationProgressChange: 10 },
+                            { from: "help_desk", to: "ticketing_system", protocol: "Minimal Post-Migration Issues", color: "var(--proto-support)", packet: "✅", issuesOpenChange: -0 },
+                            { from: "ad_engineers", to: "old_ad_domain", protocol: "Old AD Decommissioned Successfully", color: "var(--proto-decommission)", packet: "🗑️", legacyADDecommissionedChange: "Yes", projectPhaseChange: "Post-Migration" },
+
+                            // Project Closure and Celebration
+                            { from: "project_manager", to: "project_status_dashboard", protocol: "Project Closed, Under Budget, Ahead of Schedule", color: "var(--proto-success)", packet: "📊", projectHealthChange: "Completed", budgetStatusChange: "Under Budget" },
+                            { from: "project_sponsor", to: "project_manager", protocol: "Recognition: Exemplary Project Execution", color: "var(--proto-success)", packet: "🏅" },
+                            { from: "project_manager", to: "project_manager", protocol: "Team Celebration!", color: "var(--proto-success)", packet: "🥳" }
+                        ]
+                    }
+                },
+                protocolLegend: {
+                    // Core Phases
+                    "Project Mandate": { color: "var(--proto-initiation)", symbol: "👍" },
+                    "Formalize Project": { color: "var(--proto-initiation)", symbol: "📜" },
+                    "Requirements Gathering": { color: "var(--proto-planning)", symbol: "📋" },
+                    "Produce HLD/LLD": { color: "var(--proto-design)", symbol: "📝" },
+                    "Technical Review": { color: "var(--proto-design)", symbol: "🔎" },
+                    "Develop Strategy": { color: "var(--proto-planning)", symbol: "🗺️" },
+                    "Build New AD": { color: "var(--proto-build)", symbol: "🔑" },
+                    "Network Prep": { color: "var(--proto-build)", symbol: "🔌" },
+                    "Server Provisioning": { color: "var(--proto-build)", symbol: "🖥️" },
+                    "Tool Configuration": { color: "var(--proto-migration)", symbol: "⚙️" },
+                    "Read Objects": { color: "var(--proto-migration)", symbol: "⬇️" },
+                    "Migrate Objects": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "Execute Tests": { color: "var(--proto-testing)", symbol: "🐞" },
+                    "App Compatibility": { color: "var(--proto-testing)", symbol: "✔️" },
+                    "Develop Training": { color: "var(--proto-support)", symbol: "🎓" },
+                    "User Login": { color: "var(--proto-go_live)", symbol: "🧑‍💻" },
+                    "Health Monitoring": { color: "var(--proto-monitoring)", symbol: "📈" },
+                    "Log Issues": { color: "var(--proto-support)", symbol: "🎫" },
+                    "Report Progress": { color: "var(--proto-monitoring)", symbol: "📊" },
+                    "Decommission": { color: "var(--proto-decommission)", symbol: "🗑️" },
+
+                    // Standard Migration Flow
+                    "Approve Project Charter": { color: "var(--proto-initiation)", symbol: "👍" },
+                    "Project Kick-off & Stakeholder Alignment": { color: "var(--proto-initiation)", symbol: "📜" },
+                    "Gather Requirements for New AD": { color: "var(--proto-planning)", symbol: "📋" },
+                    "Produce High-Level Design (HLD)": { color: "var(--proto-design)", symbol: "📝" },
+                    "Develop Low-Level Design (LLD)": { color: "var(--proto-design)", symbol: "🔎" },
+                    "Create Detailed Migration Strategy": { color: "var(--proto-planning)", symbol: "🗺️" },
+                    "Build New AD Domain Controllers": { color: "var(--proto-build)", symbol: "🔑" },
+                    "Configure Network Connectivity": { color: "var(--proto-build)", symbol: "🔌" },
+                    "Provision Member Servers": { color: "var(--proto-build)", symbol: "🖥️" },
+                    "Configure Migration Tool (Pilot Group)": { color: "var(--proto-migration)", symbol: "⚙️" },
+                    "Sync Pilot Users/Groups": { color: "var(--proto-migration)", symbol: "⬇️" },
+                    "Migrate Pilot Users (10%)": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "Test Pilot Functionality": { color: "var(--proto-testing)", symbol: "🐞" },
+                    "Gather Pilot User Feedback": { color: "var(--proto-support)", symbol: "💬" },
+                    "Schedule Production Batch 1": { color: "var(--proto-planning)", symbol: "📅" },
+                    "Migrate Production Batch 1 (30%)": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "Remediate Applications Post-Migration": { color: "var(--proto-testing)", symbol: "⚙️" },
+                    "Schedule Production Batch 2": { color: "var(--proto-planning)", symbol: "📅" },
+                    "Migrate Production Batch 2 (50%)": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "Final UAT & Performance Testing": { color: "var(--proto-testing)", symbol: "✔️" },
+                    "Authorize Go-Live": { color: "var(--proto-initiation)", symbol: "✅" },
+                    "Provide End-User Training & Support": { color: "var(--proto-support)", symbol: "🎓" },
+                    "Successful User Login (100% Migrated)": { color: "var(--proto-go_live)", symbol: "🧑‍💻" },
+                    "Continuous Health Monitoring": { color: "var(--proto-monitoring)", symbol: "📈" },
+                    "Manage Post-Migration Support Issues": { color: "var(--proto-support)", symbol: "🎫" },
+                    "Decommission Old AD Environment": { color: "var(--proto-decommission)", symbol: "🗑️" },
+                    "Project Closure & Final Report": { color: "var(--proto-success)", symbol: "📊" },
+                    "Project Completion Sign-off": { color: "var(--proto-success)", symbol: "🏆" },
+
+                    // Technical Blockers Scenario
+                    "Initial Requirements (Legacy App Integration)": { color: "var(--proto-planning)", symbol: "📋" },
+                    "Design Approved (Initial Assumptions)": { color: "var(--proto-design)", symbol: "📝" },
+                    "New AD Build Complete": { color: "var(--proto-build)", symbol: "🔑" },
+                    "Prepare Pilot Migration": { color: "var(--proto-migration)", symbol: "⚙️" },
+                    "Pilot Testing Initiated": { color: "var(--proto-testing)", symbol: "🐞" },
+                    "Report: Legacy App A Fails in New AD": { color: "var(--proto-issue)", symbol: "❌" },
+                    "Escalate Critical Technical Blocker": { color: "var(--proto-escalation)", symbol: "🛑" },
+                    "Request Technical Investigation": { color: "var(--proto-investigation)", symbol: "🔎" },
+                    "Root Cause: Incompatible Authentication Protocol": { color: "var(--proto-issue)", symbol: "⁉️" },
+                    "Rework Design for Legacy App A": { color: "var(--proto-replan)", symbol: "📝" },
+                    "Implement Design Changes (AD/GPO Adjustments)": { color: "var(--proto-build)", symbol: "🛠️" },
+                    "Re-Test Legacy App A": { color: "var(--proto-testing)", symbol: "✔️" },
+                    "App A Functionality Verified": { color: "var(--proto-resolution)", symbol: "✅" },
+                    "Update Status: Blocker Resolved": { color: "var(--proto-success)", symbol: "📊" },
+                    "Resume Batch Migrations": { color: "var(--proto-migration)", symbol: "⬆️" },
+
+                    // Scope Creep Scenario
+                    "Migration in Progress (50% Complete)": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "Request: Enhanced Security Groups for new compliance": { color: "var(--proto-issue)", symbol: "➕" },
+                    "Assess Impact of New Scope": { color: "var(--proto-planning)", symbol: "🔎" },
+                    "Impact Report: +2 Weeks, +$X, Requires Re-work": { color: "var(--proto-escalation)", symbol: "💸" },
+                    "Present Options: Delay, Reduce Scope, Increase Budget": { color: "var(--proto-replan)", symbol: "💬" },
+                    "Decision: Integrate, Extend Timeline by 2 Weeks": { color: "var(--proto-resolution)", symbol: "✅" },
+                    "Update Migration Plan & Schedule": { color: "var(--proto-replan)", symbol: "🗺️" },
+                    "Implement New Security Group Design": { color: "var(--proto-build)", symbol: "🛠️" },
+                    "Continue Migration (Adjusted Plan)": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "Update Status: Scope Managed, New Baseline": { color: "var(--proto-success)", symbol: "📊" },
+
+                    // Budget Overrun Scenario
+                    "Budget Approved ($1M)": { color: "var(--proto-initiation)", symbol: "💰" },
+                    "Architectural Design Complete": { color: "var(--proto-design)", symbol: "📝" },
+                    "Tool Procurement & Licensing": { color: "var(--proto-build)", symbol: "⚙️" },
+                    "Alert: Unexpected High License Cost for Feature X": { color: "var(--proto-issue)", symbol: "💸" },
+                    "Escalate Budget Overrun Risk": { color: "var(--proto-escalation)", symbol: "❗" },
+                    "Options: New Vendor, Reduce Scope, Additional Funds": { color: "var(--proto-replan)", symbol: "🤝" },
+                    "Decision: Secure Additional Funds ($100K)": { color: "var(--proto-resolution)", symbol: "✅" },
+                    "Update Status: Budget Revised, Project Continues": { color: "var(--proto-success)", symbol: "📊" },
+                    "Proceed with New AD Build": { color: "var(--proto-build)", symbol: "🔑" },
+
+                    // Resource Constraints Scenario
+                    "New AD Build in Progress (70% Complete)": { color: "var(--proto-build)", symbol: "🔑" },
+                    "Key AD Engineer Resigns": { color: "var(--proto-issue)", symbol: "🚪" },
+                    "Escalate Critical Resource Loss": { color: "var(--proto-escalation)", symbol: "❗" },
+                    "Re-assign Tasks, Impact Assessment": { color: "var(--proto-replan)", symbol: "📋" },
+                    "Impact: Build Delayed by 3 Weeks, High Risk": { color: "var(--proto-issue)", symbol: "⏰" },
+                    "Decision: Hire Contractor, Cross-Train Existing Staff": { color: "var(--proto-resolution)", symbol: "🤝" },
+                    "Onboard & Train New Contractor": { color: "var(--proto-planning)", symbol: "🎓" },
+                    "Resume Build with New Team Structure": { color: "var(--proto-build)", symbol: "🛠️" },
+                    "Update Status: Resource Issue Mitigated, Project Recovering": { color: "var(--proto-success)", symbol: "📊" },
+
+                    // Successful Completion Scenario
+                    "Project Approved & Funded": { color: "var(--proto-initiation)", symbol: "🏆" },
+                    "Well-Defined Project Plan": { color: "var(--proto-planning)", symbol: "🗺️" },
+                    "New AD Built to Spec": { color: "var(--proto-build)", symbol: "🔑" },
+                    "Pilot Migration Successful (10%)": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "All Tests Pass in Pilot": { color: "var(--proto-testing)", symbol: "✅" },
+                    "Phased Migration Complete (90%)": { color: "var(--proto-migration)", symbol: "⬆️" },
+                    "All Applications Remediated": { color: "var(--proto-testing)", symbol: "✔️" },
+                    "Go-Live Approved Ahead of Schedule": { color: "var(--proto-go_live)", symbol: "🚀" },
+                    "Smooth User Transition (100% Migrated)": { color: "var(--proto-go_live)", symbol: "😊" },
+                    "Minimal Post-Migration Issues": { color: "var(--proto-support)", symbol: "✅" },
+                    "Old AD Decommissioned Successfully": { color: "var(--proto-decommission)", symbol: "🗑️" },
+                    "Project Closed, Under Budget, Ahead of Schedule": { color: "var(--proto-success)", symbol: "📊" },
+                    "Recognition: Exemplary Project Execution": { color: "var(--proto-success)", symbol: "🏅" },
+                    "Team Celebration!": { color: "var(--proto-success)", symbol: "🥳" }
+                },
+                animationSpeed: 1,
+                packetSize: 20,
+                deviceWidth: 100,
+                deviceHeight: 50,
+                packetDelayAfterArrival: 700,
+                initialProjectPhase: "Ready",
+                initialMigrationProgress: 0,
+                initialBudgetStatus: "On Track",
+                initialRiskLevel: "Low",
+                initialIssuesOpen: 0,
+                initialLegacyADDecommissioned: "No",
+                initialProjectHealth: "Good"
+            };
+
+            // --- State Variables ---
+            let isRunning = false;
+            let currentFlowType = null;
+            let currentFlowStepIndex = 0;
+            let activePacket = null;
+            let animationFrameId = null;
+            let packetSendTimeoutId = null;
+            
+            // Stats
+            let projectPhase = config.initialProjectPhase;
+            let migrationProgress = config.initialMigrationProgress;
+            let budgetStatus = config.initialBudgetStatus;
+            let riskLevel = config.initialRiskLevel;
+            let issuesOpen = config.initialIssuesOpen;
+            let legacyADDecommissioned = config.initialLegacyADDecommissioned;
+            let projectHealth = config.initialProjectHealth;
+
+            // --- DOM Elements ---
+            const elements = {
+                networkCanvas: document.getElementById('networkCanvas'),
+                legendGrid: document.querySelector('#legend .legend-grid'),
+                packetCount: document.getElementById('packetCount'),
+                protocolBadges: document.getElementById('protocolBadges'),
+                status: document.getElementById('status'),
+                controlButtons: document.querySelectorAll('.btn'),
+                
+                // Stats elements
+                projectPhase: document.getElementById('projectPhase'),
+                migrationProgress: document.getElementById('migrationProgress'),
+                budgetStatus: document.getElementById('budgetStatus'),
+                riskLevel: document.getElementById('riskLevel'),
+                issuesOpen: document.getElementById('issuesOpen'),
+                legacyADDecommissioned: document.getElementById('legacyADDecommissioned'),
+                projectHealth: document.getElementById('projectHealth')
+            };
+
+            /**
+             * Initializes the network visualization by creating devices and the legend.
+             * @memberof NetworkAnimator
+             */
+            function initializeNetwork() {
+                if (!elements.networkCanvas) return;
+
+                document.querySelectorAll('.device, .connection, .packet').forEach(el => el.remove());
+
+                createDevices();
+                initializeLegend();
+                resetStats();
+                updateStatus('Ready for AD Migration Project Simulation!', 'var(--ready-status)');
+            }
+
+            /**
+             * Creates and appends device elements to the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function createDevices() {
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const deviceElement = document.createElement('div');
+                    deviceElement.className = 'device';
+                    deviceElement.id = id;
+                    deviceElement.style.left = `${device.x}px`;
+                    deviceElement.style.top = `${device.y}px`;
+                    deviceElement.style.borderColor = device.color;
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    deviceElement.style.background = `linear-gradient(45deg, ${colorValue || device.color}20, ${colorValue || device.color}40)`;
+
+                    deviceElement.innerHTML = `
+                        <div class="device-icon">${device.symbol}</div>
+                        <div class="device-name">${device.name}</div>
+                    `;
+
+                    elements.networkCanvas.appendChild(deviceElement);
+                });
+            }
+
+            /**
+             * Populates the protocol legend based on the `config.protocolLegend`.
+             * @memberof NetworkAnimator
+             */
+            function initializeLegend() {
+                if (!elements.legendGrid) return;
+
+                elements.legendGrid.innerHTML = '';
+                Object.entries(config.protocolLegend).forEach(([name, protocol]) => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protocol.color.replace('var(', '--').replace(')', '')).trim();
+
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${colorValue || protocol.color}"></div>
+                        <span>${protocol.symbol} ${name}</span>
+                    `;
+                    elements.legendGrid.appendChild(item);
+                });
+            }
+
+            /**
+             * Starts the animation for a specific flow type.
+             * @memberof NetworkAnimator
+             * @param {string} flowType - The type of IT project flow to simulate.
+             */
+            function startAnimation(flowType) {
+                stopAnimation(); // Stop any previous animation
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`${flowType}Btn`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+
+                if (flowType === 'full_topology') {
+                    isRunning = false;
+                    currentFlowType = null;
+                    Object.values(config.flows.full_topology.sequence).forEach(conn => createConnection(conn));
+                    updateStatus('FULL AD MIGRATION TOPOLOGY (Static View)', 'var(--ready-status)');
+                    resetStats(); // Reset stats but keep static view
+                    updateStatsDisplay();
+                } else {
+                    isRunning = true;
+                    currentFlowType = flowType;
+                    currentFlowStepIndex = 0;
+                    resetStats(); // Reset all stats before starting a new dynamic flow
+                    updateStatus(config.flows[flowType].description.toUpperCase(), 'var(--active-red)'); // Simulation is active!
+                    
+                    config.flows[currentFlowType].sequence.forEach(conn => createConnection(conn));
+
+                    packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    animationFrameId = requestAnimationFrame(animatePackets);
+                }
+            }
+
+            /**
+             * Sends the next packet in the current flow's sequence.
+             * @memberof NetworkAnimator
+             */
+            function sendNextPacketInSequence() {
+                if (!isRunning || !currentFlowType || !config.flows[currentFlowType]) {
+                    return;
+                }
+
+                const flowSequence = config.flows[currentFlowType].sequence;
+
+                if (currentFlowStepIndex < flowSequence.length) {
+                    const connectionStep = flowSequence[currentFlowStepIndex];
+                    createPacket(connectionStep);
+
+                    // Update stats based on connectionStep properties
+                    if (connectionStep.projectPhaseChange) {
+                        projectPhase = connectionStep.projectPhaseChange;
+                    }
+                    if (connectionStep.migrationProgressChange) {
+                        migrationProgress = Math.min(100, Math.max(0, migrationProgress + connectionStep.migrationProgressChange));
+                    }
+                    if (connectionStep.budgetStatusChange) {
+                        budgetStatus = connectionStep.budgetStatusChange;
+                    }
+                    if (connectionStep.riskLevelChange) {
+                        riskLevel = connectionStep.riskLevelChange;
+                    }
+                    if (connectionStep.issuesOpenChange) {
+                        issuesOpen = Math.max(0, issuesOpen + connectionStep.issuesOpenChange);
+                    }
+                    if (connectionStep.legacyADDecommissionedChange) {
+                        legacyADDecommissioned = connectionStep.legacyADDecommissionedChange;
+                    }
+                    if (connectionStep.projectHealthChange) {
+                        projectHealth = connectionStep.projectHealthChange;
+                    }
+
+                    updateStatsDisplay();
+                } else {
+                    stopAnimation();
+                    updateStatus('Scenario Completed!', 'var(--ready-status)');
+                }
+            }
+
+            /**
+             * Stops all ongoing animations and clears the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function stopAnimation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (packetSendTimeoutId) {
+                    clearTimeout(packetSendTimeoutId);
+                    packetSendTimeoutId = null;
+                }
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+                activePacket = null;
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                resetStats();
+                updateStatsDisplay(); // Ensure stats display is updated to reset values
+            }
+
+            /**
+             * Resets the simulation statistics to their initial state.
+             * @memberof NetworkAnimator
+             */
+            function resetStats() {
+                projectPhase = config.initialProjectPhase;
+                migrationProgress = config.initialMigrationProgress;
+                budgetStatus = config.initialBudgetStatus;
+                riskLevel = config.initialRiskLevel;
+                issuesOpen = config.initialIssuesOpen;
+                legacyADDecommissioned = config.initialLegacyADDecommissioned;
+                projectHealth = config.initialProjectHealth;
+                updateStatsDisplay(); // Call to update DOM
+            }
+
+            /**
+             * Updates the displayed statistics on the right sidebar.
+             * @memberof NetworkAnimator
+             */
+            function updateStatsDisplay() {
+                elements.projectPhase.textContent = projectPhase;
+                elements.migrationProgress.textContent = `${migrationProgress}%`;
+                elements.issuesOpen.textContent = issuesOpen;
+                elements.legacyADDecommissioned.textContent = legacyADDecommissioned;
+
+                // Budget Status Color Coding
+                elements.budgetStatus.textContent = budgetStatus;
+                let budgetColor = 'var(--ready-status)';
+                if (budgetStatus === 'Warning') budgetColor = 'var(--active-orange)';
+                if (budgetStatus === 'Overrun') budgetColor = 'var(--stopped-status)';
+                if (budgetStatus === 'Under Budget') budgetColor = 'var(--proto-success)';
+                elements.budgetStatus.style.color = budgetColor;
+
+                // Risk Level Color Coding
+                elements.riskLevel.textContent = riskLevel;
+                let riskColor = 'var(--ready-status)';
+                if (riskLevel === 'Medium') riskColor = 'var(--active-orange)';
+                if (riskLevel === 'High') riskColor = 'var(--stopped-status)';
+                elements.riskLevel.style.color = riskColor;
+
+                // Project Health Color Coding
+                elements.projectHealth.textContent = projectHealth;
+                let healthColor = 'var(--ready-status)';
+                if (projectHealth === 'Warning') healthColor = 'var(--active-orange)';
+                if (projectHealth === 'Critical') healthColor = 'var(--stopped-status)';
+                if (projectHealth === 'Completed') healthColor = 'var(--proto-success)';
+                elements.projectHealth.style.color = healthColor;
+
+                if (elements.packetCount) {
+                    elements.packetCount.textContent = activePacket ? 1 : 0;
+                }
+
+                if (elements.protocolBadges) {
+                    const uniqueProtocols = new Set();
+                    if (activePacket) {
+                        uniqueProtocols.add(activePacket.connection.protocol);
+                    }
+                    elements.protocolBadges.innerHTML = Array.from(uniqueProtocols).map(protocolName => {
+                        const protoConfig = config.protocolLegend[protocolName];
+                        if (protoConfig) {
+                            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protoConfig.color.replace('var(', '--').replace(')', '')).trim();
+                            return `<span class="protocol-badge" style="background: ${colorValue || protoConfig.color};">${protoConfig.symbol} ${protocolName}</span>`;
+                        }
+                        return '';
+                    }).join('');
+                }
+            }
+
+
+            /**
+             * Creates a visual connection line between two devices.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object (from, to, protocol, color).
+             */
+            function createConnection(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Missing device for connection: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const fromX = fromDevice.x + config.deviceWidth / 2;
+                const fromY = fromDevice.y + config.deviceHeight / 2;
+                const toX = toDevice.x + config.deviceWidth / 2;
+                const toY = toDevice.y + config.deviceHeight / 2;
+
+                const dx = toX - fromX;
+                const dy = toY - fromY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                const connectionEl = document.createElement('div');
+                connectionEl.className = 'connection';
+                connectionEl.style.left = `${fromX}px`;
+                connectionEl.style.top = `${fromY}px`;
+                connectionEl.style.width = `${length}px`;
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                connectionEl.style.background = colorValue || connection.color;
+                connectionEl.style.transform = `rotate(${angle}deg)`;
+
+                connectionEl.innerHTML = `
+                    <span class="connection-label" style="background: ${colorValue || connection.color}E6;">
+                        ${connection.protocol}
+                    </span>
+                `;
+
+                elements.networkCanvas.appendChild(connectionEl);
+            }
+
+            /**
+             * Creates an animated packet element and sets it as the active packet.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object for the packet's path.
+             */
+            function createPacket(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Cannot create packet, missing device: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const packetEl = document.createElement('div');
+                packetEl.className = 'packet';
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                packetEl.style.background = colorValue || connection.color;
+                packetEl.textContent = connection.packet;
+
+                elements.networkCanvas.appendChild(packetEl);
+
+                const offsetX = config.deviceWidth / 2 - config.packetSize / 2;
+                const offsetY = config.deviceHeight / 2 - config.packetSize / 2;
+
+                activePacket = {
+                    connection: connection,
+                    element: packetEl,
+                    progress: 0,
+                    fromPos: { x: fromDevice.x + offsetX, y: fromDevice.y + offsetY },
+                    toPos: { x: toDevice.x + offsetX, y: toDevice.y + offsetY }
+                };
+            }
+
+            /**
+             * The main animation loop for packets, called via requestAnimationFrame.
+             * @memberof NetworkAnimator
+             */
+            function animatePackets() {
+                if (!isRunning) {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    return;
+                }
+
+                if (activePacket) {
+                    activePacket.progress += 0.003 * config.animationSpeed;
+
+                    if (activePacket.progress >= 1) {
+                        activePacket.element.remove();
+                        activePacket = null;
+                        currentFlowStepIndex++;
+                        
+                        packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    } else {
+                        const x = activePacket.fromPos.x + (activePacket.toPos.x - activePacket.fromPos.x) * activePacket.progress;
+                        const y = activePacket.fromPos.y + (activePacket.toPos.y - activePacket.fromPos.y) * activePacket.progress;
+
+                        activePacket.element.style.left = `${x}px`;
+                        activePacket.element.style.top = `${y}px`;
+                    }
+                }
+
+                updateStatsDisplay();
+                animationFrameId = requestAnimationFrame(animatePackets);
+            }
+
+            /**
+             * Updates the status message displayed on the page.
+             * @memberof NetworkAnimator
+             * @param {string} message - The status message to display.
+             * @param {string} [color] - Optional, a CSS color string for the status text.
+             */
+            function updateStatus(message, color = 'var(--ready-status)') {
+                if (elements.status) {
+                    elements.status.textContent = message;
+                    elements.status.style.color = color;
+                }
+            }
+
+            /**
+             * Exports the current network configuration and flow steps to a CSV file.
+             * @memberof NetworkAnimator
+             */
+            function exportToCSV() {
+                const csvRows = [];
+                csvRows.push('Type,ID,Name,Symbol/Packet,X,Y,Color,Protocol,From,To,FlowStep,ProjectPhaseChange,MigrationProgressChange,BudgetStatusChange,RiskLevelChange,IssuesOpenChange,LegacyADDecommissionedChange,ProjectHealthChange');
+
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    csvRows.push(`Device,${id},${device.name},${device.symbol},${device.x},${device.y},${colorValue || device.color},,-,,,,,,,`);
+                });
+
+                Object.entries(config.flows).forEach(([flowId, flow]) => {
+                    if (flowId === 'full_topology') return; 
+
+                    flow.sequence.forEach((conn, index) => {
+                        const colorValue = getComputedStyle(document.documentElement).getPropertyValue(conn.color.replace('var(', '--').replace(')', '')).trim();
+                        csvRows.push(`Flow Step,,${flowId} - Step ${index + 1},${conn.packet},,,,${colorValue || conn.color},${conn.protocol},${conn.from},${conn.to},${index + 1},` +
+                            `${conn.projectPhaseChange || ''},${conn.migrationProgressChange || ''},${conn.budgetStatusChange || ''},${conn.riskLevelChange || ''},${conn.issuesOpenChange || ''},` +
+                            `${conn.legacyADDecommissionedChange || ''},${conn.projectHealthChange || ''}`);
+                    });
+                });
+
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ad_migration_simulation_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('AD Migration simulation data exported to CSV successfully!');
+            }
+
+            /**
+             * Handles keyboard input for animation controls.
+             * @memberof NetworkAnimator
+             * @param {KeyboardEvent} e - The keyboard event object.
+             */
+            function handleKeyDown(e) {
+                switch(e.key) {
+                    case '1': NetworkAnimator.startAnimation('ad_migration_project_flow'); break;
+                    case '2': NetworkAnimator.startAnimation('ad_migration_technical_blockers'); break;
+                    case '3': NetworkAnimator.startAnimation('ad_migration_scope_creep'); break;
+                    case '4': NetworkAnimator.startAnimation('ad_migration_budget_overrun'); break;
+                    case '5': NetworkAnimator.startAnimation('ad_migration_resource_constraints'); break;
+                    case '6': NetworkAnimator.startAnimation('ad_migration_successful_completion'); break;
+                    case '7': NetworkAnimator.startAnimation('full_topology'); break;
+                    case ' ': e.preventDefault(); NetworkAnimator.stopAnimation(); break;
+                    case 'e': e.preventDefault(); NetworkAnimator.exportToCSV(); break;
+                }
+            }
+
+            // --- Public API ---
+            return {
+                initialize: initializeNetwork,
+                startAnimation: startAnimation,
+                stopAnimation: stopAnimation,
+                exportToCSV: exportToCSV,
+                handleKeyDown: handleKeyDown
+            };
+
+        })();
+
+        window.addEventListener('load', NetworkAnimator.initialize);
+        document.addEventListener('keydown', NetworkAnimator.handleKeyDown);
+
+    </script>
+</body>
+</html>
