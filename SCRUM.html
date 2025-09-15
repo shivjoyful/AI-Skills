@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agile IT Project Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Theme Colors */
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --header-bg: rgba(255, 255, 255, 0.1);
+            --canvas-bg: rgba(255, 255, 255, 0.05);
+            --canvas-border: rgba(255, 255, 255, 0.1);
+            --text-light: #fff;
+            --accent-blue: #667eea;
+            --accent-purple: #764ba2;
+            --active-red: #ff6b6b;
+            --active-orange: #ee5a24;
+            --stopped-status: #e74c3c;
+            --ready-status: #4CAF50;
+            --sidebar-bg: rgba(0, 0, 0, 0.85);
+
+            /* Device/Entity Colors (Agile Specific) */
+            --color-business: #3f51b5; /* Indigo */
+            --color-vision: #ff9800; /* Orange */
+            --color-po: #e91e63; /* Pink */
+            --color-backlog: #9c27b0; /* Purple */
+            --color-dev-team: #2196f3; /* Blue */
+            --color-qa: #4caf50; /* Green */
+            --color-sprint-backlog: #00bcd4; /* Cyan */
+            --color-sm: #ffc107; /* Amber */
+            --color-ceremony: #607d8b; /* Blue Grey */
+            --color-tool: #1e88e5; /* Light Blue */
+            --color-ci-cd: #c62828; /* Dark Red */
+            --color-env: #546e7a; /* Blue Grey Dark */
+            --color-prod: #424242; /* Grey Dark */
+            --color-user: #e91e63; /* Pink */
+            --color-increment: #7b1fa2; /* Deep Purple */
+            --color-status: #f1c40f; /* Yellow */
+
+            /* Protocol/Action Colors (Agile Specific) */
+            --proto-vision: #ff9800;
+            --proto-refinement: #e91e63;
+            --proto-planning: #9c27b0;
+            --proto-development: #2196f3;
+            --proto-testing: #4caf50;
+            --proto-feedback: #607d8b;
+            --proto-review: #00bcd4;
+            --proto-retrospective: #ffc107;
+            --proto-delivery: #43a047;
+            --proto-issue: #ef5350;
+            --proto-overrun: #d32f2f;
+            --proto-success: #2ecc71;
+            --proto-impairment: #d32f2f; /* For failed aspects */
+            --proto-mitigation: #ff7043; /* For addressing issues */
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow: hidden; /* Prevent scrollbars due to animations */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 2000px; /* Wider to accommodate sidebars + canvas */
+            margin: 20px auto;
+            padding: 0 20px; /* Adjust padding for sidebars */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 25px;
+            background: var(--header-bg);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            font-size: 1.05em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease-in-out;
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn.active {
+            background: linear-gradient(45deg, var(--active-red) 0%, var(--active-orange) 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn.active:hover {
+            box-shadow: 0 12px 30px rgba(255, 107, 107, 0.8);
+        }
+
+        /* Main Content Area (canvas and sidebars) */
+        .main-content {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+            position: relative; /* For proper positioning of sticky sidebars */
+        }
+
+        /* Sidebars */
+        .left-sidebar, .right-sidebar {
+            width: 250px;
+            min-width: 250px; /* Fixed width for sidebars */
+            max-height: calc(100vh - 40px); /* Limit height to viewport, considering body padding */
+            overflow-y: auto; /* Scroll if content overflows */
+            background: var(--sidebar-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            flex-shrink: 0; /* Prevent shrinking */
+            position: sticky; /* Sticky positioning within .main-content */
+            top: 20px; /* Distance from top of viewport */
+        }
+
+        .left-sidebar {
+            order: 1; /* Left side */
+        }
+
+        .right-sidebar {
+            order: 3; /* Right side */
+        }
+
+        /* Legend within Left Sidebar */
+        .legend h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column initially */
+            gap: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Stats within Right Sidebar */
+        .stats h3 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .stats div:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .status-text {
+            color: var(--ready-status);
+            font-weight: bold;
+        }
+        .protocol-badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: flex-end; /* Align badges to the right */
+        }
+        .protocol-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+
+        /* Network Canvas */
+        .network-canvas {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            height: 750px; /* Adjusted height for 6 swimlanes */
+            background: var(--canvas-bg);
+            border: 2px solid var(--canvas-border);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            order: 2; /* Middle position */
+        }
+
+        /* Swimlane Styles */
+        .swimlane {
+            position: absolute;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .swimlane-label {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--bg-darker);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        /* Specific Swimlane Positioning within the canvas */
+        /* All swimlanes made very wide to spread out devices and labels */
+        #stakeholders-product-vision-swimlane { top: 20px; left: 20px; width: 1600px; height: 100px; }
+        #product-management-swimlane { top: 135px; left: 20px; width: 1600px; height: 100px; } /* 20 + 100 + 15 = 135 */
+        #agile-team-swimlane { top: 250px; left: 20px; width: 1600px; height: 100px; } /* 135 + 100 + 15 = 250 */
+        #agile-facilitation-swimlane { top: 365px; left: 20px; width: 1600px; height: 100px; } /* 250 + 100 + 15 = 365 */
+        #dev-test-environments-swimlane { top: 480px; left: 20px; width: 1600px; height: 100px; } /* 365 + 100 + 15 = 480 */
+        #delivery-live-operations-swimlane { top: 595px; left: 20px; width: 1600px; height: 100px; } /* 480 + 100 + 15 = 595 */
+
+
+        /* Device Styles */
+        .device {
+            position: absolute;
+            width: 100px; /* Standardized small width */
+            height: 50px; /* Standardized small height */
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .device:hover {
+            transform: scale(1.08) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            z-index: 11;
+        }
+
+        .device-icon {
+            font-size: 20px; /* Standardized small font size */
+            margin-bottom: 3px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .device-name {
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Connection Styles */
+        .connection {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: 0 0;
+            height: 2px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+            z-index: 5; /* Ensure connections are below labels */
+        }
+
+        .connection-label {
+            position: absolute;
+            left: 50%;
+            top: -20px; /* Position above the line */
+            transform: translateX(-50%);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px; /* Standardized small font size */
+            font-weight: bold;
+            color: var(--text-light);
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.8); /* Stronger background for readability */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 25; /* CRITICAL: Ensure labels are on top of everything else */
+        }
+
+        /* Packet Styles */
+        .packet {
+            position: absolute;
+            width: 20px; /* Standardized small width */
+            height: 20px; /* Standardized small height */
+            border-radius: 50%;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            z-index: 15;
+            animation: pulse 1.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Responsive adjustments for large screens */
+        @media (min-width: 1801px) {
+            .network-canvas { height: 750px; } /* Adjust canvas height to fit */
+
+            #stakeholders-product-vision-swimlane { top: 20px; left: 20px; width: 1600px; height: 100px; }
+            #product-management-swimlane { top: 135px; left: 20px; width: 1600px; height: 100px; }
+            #agile-team-swimlane { top: 250px; left: 20px; width: 1600px; height: 100px; }
+            #agile-facilitation-swimlane { top: 365px; left: 20px; width: 1600px; height: 100px; }
+            #dev-test-environments-swimlane { top: 480px; left: 20px; width: 1600px; height: 100px; }
+            #delivery-live-operations-swimlane { top: 595px; left: 20px; width: 1600px; height: 100px; }
+
+            /* Device Y positions (centered at swimlane.top + 25) */
+            #business_stakeholders { x: 50px; y: 45px; }
+            #product_vision { x: 250px; y: 45px; }
+
+            #product_owner { x: 50px; y: 160px; }
+            #product_backlog { x: 250px; y: 160px; }
+
+            #dev_team { x: 50px; y: 275px; }
+            #qa_tester { x: 250px; y: 275px; }
+            #sprint_backlog { x: 450px; y: 275px; }
+
+            #scrum_master { x: 50px; y: 390px; }
+            #daily_scrum { x: 250px; y: 390px; }
+            #sprint_retrospective { x: 450px; y: 390px; }
+            #sprint_review { x: 650px; y: 390px; }
+
+            #jira_azure_devops { x: 50px; y: 505px; }
+            #ci_cd_pipeline { x: 250px; y: 505px; }
+            #test_environment { x: 450px; y: 505px; }
+
+            #production_environment { x: 50px; y: 620px; }
+            #end_user { x: 250px; y: 620px; }
+            #working_increment { x: 450px; y: 620px; }
+            #project_status_board { x: 650px; y: 620px; }
+        }
+
+
+        @media (max-width: 1800px) {
+            .container { max-width: 98%; padding: 0 10px; }
+            .left-sidebar, .right-sidebar { width: 220px; min-width: 220px; }
+            .network-canvas { height: 750px; } /* Adjusted height to fit 6 swimlanes */
+
+            #stakeholders-product-vision-swimlane, #product-management-swimlane, #agile-team-swimlane,
+            #agile-facilitation-swimlane, #dev-test-environments-swimlane, #delivery-live-operations-swimlane {
+                width: 1200px; /* Reduced width */
+                height: 100px; /* Consistent height for this breakpoint, with 15px gap */
+            }
+
+            /* Adjust top positions */
+            #stakeholders-product-vision-swimlane { top: 20px; left: 20px; }
+            #product-management-swimlane { top: 135px; left: 20px; } /* 20 + 100 + 15 = 135 */
+            #agile-team-swimlane { top: 250px; left: 20px; } /* 135 + 100 + 15 = 250 */
+            #agile-facilitation-swimlane { top: 365px; left: 20px; } /* 250 + 100 + 15 = 365 */
+            #dev-test-environments-swimlane { top: 480px; left: 20px; } /* 365 + 100 + 15 = 480 */
+            #delivery-live-operations-swimlane { top: 595px; left: 20px; width: 1200px; height: 100px; }
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (100 - 50) / 2 = swimlane.top + 25 */
+            #business_stakeholders { x: 50px; y: 45px; }
+            #product_vision { x: 250px; y: 45px; }
+
+            #product_owner { x: 50px; y: 160px; }
+            #product_backlog { x: 250px; y: 160px; }
+
+            #dev_team { x: 50px; y: 275px; }
+            #qa_tester { x: 250px; y: 275px; }
+            #sprint_backlog { x: 450px; y: 275px; }
+
+            #scrum_master { x: 50px; y: 390px; }
+            #daily_scrum { x: 250px; y: 390px; }
+            #sprint_retrospective { x: 450px; y: 390px; }
+            #sprint_review { x: 650px; y: 390px; }
+
+            #jira_azure_devops { x: 50px; y: 505px; }
+            #ci_cd_pipeline { x: 250px; y: 505px; }
+            #test_environment { x: 450px; y: 505px; }
+
+            #production_environment { x: 50px; y: 620px; }
+            #end_user { x: 250px; y: 620px; }
+            #working_increment { x: 450px; y: 620px; }
+            #project_status_board { x: 650px; y: 620px; }
+        }
+
+        @media (max-width: 1400px) {
+            .left-sidebar, .right-sidebar { width: 180px; min-width: 180px; }
+            .network-canvas { height: 750px; } /* Consistent height */
+
+            #stakeholders-product-vision-swimlane, #product-management-swimlane, #agile-team-swimlane,
+            #agile-facilitation-swimlane, #dev-test-environments-swimlane, #delivery-live-operations-swimlane {
+                width: 800px; /* Further reduced width */
+                height: 100px; /* Back to 100px height with 10px gaps for this breakpoint */
+            }
+
+            /* Adjust top positions */
+            #stakeholders-product-vision-swimlane { top: 20px; left: 20px; }
+            #product-management-swimlane { top: 130px; left: 20px; } /* 20 + 100 + 10 = 130 */
+            #agile-team-swimlane { top: 240px; left: 20px; } /* 130 + 100 + 10 = 240 */
+            #agile-facilitation-swimlane { top: 350px; left: 20px; } /* 240 + 100 + 10 = 350 */
+            #dev-test-environments-swimlane { top: 460px; left: 20px; } /* 350 + 100 + 10 = 460 */
+            #delivery-live-operations-swimlane { top: 570px; left: 20px; } /* 460 + 100 + 10 = 570 */
+
+            /* Recalibrate device positions based on new swimlane widths */
+            /* Devices centered at swimlane.top + (swimlane.height - device.height) / 2 = swimlane.top + (100 - 50) / 2 = swimlane.top + 25 */
+            #business_stakeholders { x: 40px; y: 45px; }
+            #product_vision { x: 170px; y: 45px; }
+
+            #product_owner { x: 40px; y: 155px; }
+            #product_backlog { x: 170px; y: 155px; }
+
+            #dev_team { x: 40px; y: 265px; }
+            #qa_tester { x: 170px; y: 265px; }
+            #sprint_backlog { x: 300px; y: 265px; }
+
+            #scrum_master { x: 40px; y: 375px; }
+            #daily_scrum { x: 170px; y: 375px; }
+            #sprint_retrospective { x: 300px; y: 375px; }
+            #sprint_review { x: 430px; y: 375px; }
+
+            #jira_azure_devops { x: 40px; y: 485px; }
+            #ci_cd_pipeline { x: 170px; y: 485px; }
+            #test_environment { x: 300px; y: 485px; }
+
+            #production_environment { x: 40px; y: 595px; }
+            #end_user { x: 170px; y: 595px; }
+            #working_increment { x: 300px; y: 595px; }
+            #project_status_board { x: 430px; y: 595px; }
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                flex-direction: column; /* Stack sidebars and canvas */
+                gap: 15px;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%; /* Full width when stacked */
+                position: static; /* Remove sticky behavior */
+                max-height: 200px; /* Limit height when stacked */
+                padding: 10px;
+            }
+            .right-sidebar { order: 1; } /* Stats on top when stacked */
+            .left-sidebar { order: 3; } /* Legend on bottom when stacked */
+            .network-canvas {
+                order: 2; /* Canvas in middle */
+                height: 550px; /* Reduce canvas height */
+            }
+
+            /* Adjust swimlanes for smaller canvas */
+            .swimlane {
+                position: relative; /* Make them flow naturally within canvas */
+                top: auto; left: auto;
+                width: calc(100% - 40px); /* Full width minus padding */
+                height: auto;
+                margin: 10px auto; /* Center them */
+                padding: 10px;
+            }
+            .swimlane-label { top: -12px; left: 10px; font-size: 0.9em; padding: 3px 10px; }
+
+            /* Adjust devices within stacked swimlanes */
+            .device {
+                position: relative;
+                top: auto; left: auto;
+                margin: 10px auto; /* Center devices within swimlane */
+                display: flex;
+            }
+            .legend-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columns on wider small screens */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8em; }
+            .header p { font-size: 0.9em; }
+            .controls { gap: 8px; }
+            .btn { padding: 8px 15px; font-size: 0.8em; }
+            .network-canvas { height: 450px; }
+            .device { width: 90px; height: 45px; }
+            .device-icon { font-size: 18px; }
+            .device-name { font-size: 9px; }
+            .legend-grid {
+                grid-template-columns: 1fr; /* Single column on very small screens */
+            }
+            .protocol-badges-container { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> agile IT Project Simulation 🚀</h1>
+            <p>Understanding How Agile Works: Scenarios & Successes</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="agile_sprint_flowBtn" onclick="NetworkAnimator.startAnimation('agile_sprint_flow')" aria-label="Simulate a Standard Agile Sprint">🏃‍♂️ Standard Sprint</button>
+            <button class="btn" id="agile_progressive_elaborationBtn" onclick="NetworkAnimator.startAnimation('agile_progressive_elaboration')" aria-label="Simulate Progressive Elaboration">🔍 Elaboration</button>
+            <button class="btn" id="agile_scope_creepBtn" onclick="NetworkAnimator.startAnimation('agile_scope_creep')" aria-label="Simulate Scope Creep">➕ Scope Creep</button>
+            <button class="btn" id="agile_budget_overrunBtn" onclick="NetworkAnimator.startAnimation('agile_budget_overrun')" aria-label="Simulate Budget Overrun">💸 Budget Overrun</button>
+            <button class="btn" id="agile_estimate_missBtn" onclick="NetworkAnimator.startAnimation('agile_estimate_miss')" aria-label="Simulate Estimate Miss / Overrun Days">⏰ Estimate Miss</button>
+            <button class="btn" id="agile_failed_projectBtn" onclick="NetworkAnimator.startAnimation('agile_failed_project')" aria-label="Simulate a Failed Agile Project">💥 Failed Project</button>
+            <button class="btn" id="agile_completed_projectBtn" onclick="NetworkAnimator.startAnimation('agile_completed_project')" aria-label="Simulate a Completed Agile Project">🎉 Completed Project</button>
+            <button class="btn" id="full_topologyBtn" onclick="NetworkAnimator.startAnimation('full_topology')" aria-label="Show Full Agile Topology">🗺️ Full Topology</button>
+            <button class="btn" id="stopBtn" onclick="NetworkAnimator.stopAnimation()" aria-label="Stop Animation">⏹️ Stop</button>
+            <button class="btn" id="exportBtn" onclick="NetworkAnimator.exportToCSV()" aria-label="Export to CSV">💾 Export CSV</button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <div class="legend" id="legend">
+                    <h3>Protocol/Action Legend</h3>
+                    <div class="legend-grid">
+                        <!-- Legend items will be created dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="network-canvas" id="networkCanvas">
+                <!-- Swimlanes -->
+                <div id="stakeholders-product-vision-swimlane" class="swimlane">
+                    <span class="swimlane-label">Stakeholders & Product Vision</span>
+                </div>
+                <div id="product-management-swimlane" class="swimlane">
+                    <span class="swimlane-label">Product Management</span>
+                </div>
+                <div id="agile-team-swimlane" class="swimlane">
+                    <span class="swimlane-label">Agile Team (Dev & QA)</span>
+                </div>
+                <div id="agile-facilitation-swimlane" class="swimlane">
+                    <span class="swimlane-label">Agile Facilitation & Coaching</span>
+                </div>
+                <div id="dev-test-environments-swimlane" class="swimlane">
+                    <span class="swimlane-label">Development & Testing Environments</span>
+                </div>
+                <div id="delivery-live-operations-swimlane" class="swimlane">
+                    <span class="swimlane-label">Delivery & Live Operations</span>
+                </div>
+
+                <!-- Devices and connections will be created dynamically -->
+            </div>
+
+            <div class="right-sidebar">
+                <div class="stats" id="stats">
+                    <h3>Project Stats</h3>
+                    <div>Current Sprint: <span id="currentSprint">0</span></div>
+                    <div>Product Backlog Items: <span id="productBacklogItems">0</span></div>
+                    <div>Sprint Backlog Items: <span id="sprintBacklogItems">0</span></div>
+                    <div>Story Points Completed: <span id="storyPointsCompleted">0</span></div>
+                    <div>Project Health: <span id="projectHealth" class="status-text">Ready</span></div>
+                    <div>Total Days Overrun: <span id="totalDaysOverrun">0</span></div>
+                    <div>Total Deliverables: <span id="totalDeliverables">0</span></div>
+                    <div>Active Protocols:</div>
+                    <div id="protocolBadges" class="protocol-badges-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * @namespace NetworkAnimator
+         * @description Manages the network animation and visualization for Agile IT Project Simulation.
+         */
+        const NetworkAnimator = (() => {
+            // --- Configuration ---
+            const config = {
+                devices: {
+                    // Stakeholders & Product Vision
+                    business_stakeholders: { symbol: "🧑‍💼", name: "Business Stakeholders", x: 50, y: 45, color: "var(--color-business)", type: "Stakeholder" },
+                    product_vision: { symbol: "🌟", name: "Product Vision", x: 250, y: 45, color: "var(--color-vision)", type: "Artifact" },
+
+                    // Product Management
+                    product_owner: { symbol: "💡", name: "Product Owner", x: 50, y: 160, color: "var(--color-po)", type: "Role" },
+                    product_backlog: { symbol: "📋", name: "Product Backlog", x: 250, y: 160, color: "var(--color-backlog)", type: "Artifact" },
+
+                    // Agile Team (Dev & QA)
+                    dev_team: { symbol: "👨‍💻", name: "Development Team", x: 50, y: 275, color: "var(--color-dev-team)", type: "Team" },
+                    qa_tester: { symbol: "🐞", name: "QA Tester", x: 250, y: 275, color: "var(--color-qa)", type: "Role" },
+                    sprint_backlog: { symbol: "📝", name: "Sprint Backlog", x: 450, y: 275, color: "var(--color-sprint-backlog)", type: "Artifact" },
+
+                    // Agile Facilitation & Coaching
+                    scrum_master: { symbol: "🤝", name: "Scrum Master", x: 50, y: 390, color: "var(--color-sm)", type: "Role" },
+                    daily_scrum: { symbol: "🗣️", name: "Daily Scrum", x: 250, y: 390, color: "var(--color-ceremony)", type: "Ceremony" },
+                    sprint_retrospective: { symbol: "🔄", name: "Sprint Retrospective", x: 450, y: 390, color: "var(--color-ceremony)", type: "Ceremony" },
+                    sprint_review: { symbol: "👀", name: "Sprint Review", x: 650, y: 390, color: "var(--color-ceremony)", type: "Ceremony" },
+
+                    // Development & Testing Environments
+                    jira_azure_devops: { symbol: "⚙️", name: "Jira/Azure DevOps", x: 50, y: 505, color: "var(--color-tool)", type: "Tool" },
+                    ci_cd_pipeline: { symbol: "🚀", name: "CI/CD Pipeline", x: 250, y: 505, color: "var(--color-ci-cd)", type: "System" },
+                    test_environment: { symbol: "🧪", name: "Test Environment", x: 450, y: 505, color: "var(--color-env)", type: "Environment" },
+
+                    // Delivery & Live Operations
+                    production_environment: { symbol: "🖥️", name: "Production Environment", x: 50, y: 620, color: "var(--color-prod)", type: "Environment" },
+                    end_user: { symbol: "🧑‍💻", name: "End-User (Live)", x: 250, y: 620, color: "var(--color-user)", type: "User" },
+                    working_increment: { symbol: "✨", name: "Working Increment", x: 450, y: 620, color: "var(--color-increment)", type: "Deliverable" },
+                    project_status_board: { symbol: "📈", name: "Project Status Board", x: 650, y: 620, color: "var(--color-status)", type: "Metric" }
+                },
+                flows: {
+                    full_topology: {
+                        description: "Full Agile Project Topology (Static View)",
+                        sequence: [
+                            { from: "business_stakeholders", to: "product_vision", protocol: "Define Vision", color: "var(--proto-vision)", packet: "🌟" },
+                            { from: "product_vision", to: "product_owner", protocol: "Vision Alignment", color: "var(--proto-vision)", packet: "🎯" },
+                            { from: "product_owner", to: "product_backlog", protocol: "Manage Product Backlog", color: "var(--proto-refinement)", packet: "📋" },
+
+                            { from: "product_backlog", to: "dev_team", protocol: "Backlog Refinement", color: "var(--proto-planning)", packet: "💡" },
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint Planning", color: "var(--proto-planning)", packet: "📝" },
+                            { from: "dev_team", to: "sprint_backlog", protocol: "Commitment", color: "var(--proto-planning)", packet: "✅" },
+
+                            { from: "dev_team", to: "jira_azure_devops", protocol: "Update Work Items", color: "var(--proto-development)", packet: "⚙️" },
+                            { from: "jira_azure_devops", to: "ci_cd_pipeline", protocol: "Trigger Build", color: "var(--proto-development)", packet: "🚀" },
+                            { from: "ci_cd_pipeline", to: "test_environment", protocol: "Deploy to Test", color: "var(--proto-testing)", packet: "🧪" },
+                            { from: "qa_tester", to: "test_environment", protocol: "Execute Tests", color: "var(--proto-testing)", packet: "🐞" },
+                            { from: "test_environment", to: "qa_tester", protocol: "Test Results", color: "var(--proto-testing)", packet: "📊" },
+
+                            { from: "scrum_master", to: "dev_team", protocol: "Facilitate Daily Scrum", color: "var(--proto-ceremony)", packet: "🗣️" },
+                            { from: "dev_team", to: "daily_scrum", protocol: "Updates", color: "var(--proto-ceremony)", packet: "💬" },
+                            { from: "scrum_master", to: "sprint_retrospective", protocol: "Facilitate Retrospective", color: "var(--proto-ceremony)", packet: "🔄" },
+                            { from: "scrum_master", to: "sprint_review", protocol: "Organize Sprint Review", color: "var(--proto-ceremony)", packet: "👀" },
+                            { from: "sprint_review", to: "business_stakeholders", protocol: "Demo Increment", color: "var(--proto-delivery)", packet: "✨" },
+
+                            { from: "qa_tester", to: "production_environment", protocol: "Sign-off for Prod", color: "var(--proto-delivery)", packet: "✅" },
+                            { from: "ci_cd_pipeline", to: "production_environment", protocol: "Deploy to Production", color: "var(--proto-delivery)", packet: "🖥️" },
+                            { from: "production_environment", to: "end_user", protocol: "Deliver Value", color: "var(--proto-delivery)", packet: "😊" },
+                            { from: "end_user", to: "product_owner", protocol: "Feedback", color: "var(--proto-feedback)", packet: "💬" },
+                            { from: "working_increment", to: "project_status_board", protocol: "Update Metrics", color: "var(--proto-status)", packet: "📈" }
+                        ]
+                    },
+                    agile_sprint_flow: {
+                        description: "Standard Agile Sprint: User Story Implementation (2-week sprint)",
+                        sequence: [
+                            // Sprint Planning
+                            { from: "product_owner", to: "product_backlog", protocol: "Select PBIs for Sprint", color: "var(--proto-planning)", packet: "📝", pbiDecrease: 5, sbiIncrease: 5, storyPointsChange: 20 },
+                            { from: "product_backlog", to: "dev_team", protocol: "Team Estimates Stories", color: "var(--proto-planning)", packet: "💡" },
+                            { from: "dev_team", to: "sprint_backlog", protocol: "Commit to Sprint Backlog", color: "var(--proto-planning)", packet: "✅" },
+                            { from: "sprint_backlog", to: "jira_azure_devops", protocol: "Update Sprint Board", color: "var(--proto-tool)", packet: "⚙️", currentSprintChange: 1 },
+
+                            // Daily Scrums
+                            { from: "dev_team", to: "daily_scrum", protocol: "Daily Sync (Day 1)", color: "var(--proto-ceremony)", packet: "🗣️" },
+                            { from: "qa_tester", to: "daily_scrum", protocol: "Daily Sync (Day 1)", color: "var(--proto-ceremony)", packet: "🗣️" },
+                            { from: "scrum_master", to: "daily_scrum", protocol: "Facilitate (Day 1)", color: "var(--proto-ceremony)", packet: "🤝" },
+
+                            // Development & Testing
+                            { from: "dev_team", to: "jira_azure_devops", protocol: "Start Development (Story 1)", color: "var(--proto-development)", packet: "👨‍💻" },
+                            { from: "jira_azure_devops", to: "ci_cd_pipeline", protocol: "Code Committed & Build Triggered", color: "var(--proto-ci-cd)", packet: "🚀" },
+                            { from: "ci_cd_pipeline", to: "test_environment", protocol: "Deploy to Test Environment", color: "var(--proto-testing)", packet: "🧪" },
+                            { from: "qa_tester", to: "test_environment", protocol: "Start Testing (Story 1)", color: "var(--proto-testing)", packet: "🐞" },
+                            { from: "test_environment", to: "qa_tester", protocol: "Test Pass for Story 1", color: "var(--proto-testing)", packet: "✅" },
+
+                            { from: "dev_team", to: "jira_azure_devops", protocol: "Start Development (Story 2)", color: "var(--proto-development)", packet: "👨‍💻" },
+                            { from: "jira_azure_devops", to: "ci_cd_pipeline", protocol: "Code Committed & Build Triggered", color: "var(--proto-ci-cd)", packet: "🚀" },
+                            { from: "ci_cd_pipeline", to: "test_environment", protocol: "Deploy to Test Environment", color: "var(--proto-testing)", packet: "🧪" },
+                            { from: "qa_tester", to: "test_environment", protocol: "Start Testing (Story 2)", color: "var(--proto-testing)", packet: "🐞" },
+                            { from: "test_environment", to: "qa_tester", protocol: "Test Pass for Story 2", color: "var(--proto-testing)", packet: "✅" },
+
+                            // Sprint Review
+                            { from: "scrum_master", to: "sprint_review", protocol: "Organize Sprint Review", color: "var(--proto-ceremony)", packet: "👀" },
+                            { from: "dev_team", to: "sprint_review", protocol: "Demonstrate Working Increment", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 5, storyPointsChange: 20 },
+                            { from: "qa_tester", to: "sprint_review", protocol: "Share QA Results", color: "var(--proto-testing)", packet: "📊" },
+                            { from: "product_owner", to: "sprint_review", protocol: "Accept Stories", color: "var(--proto-success)", packet: "👍" },
+                            { from: "business_stakeholders", to: "sprint_review", protocol: "Provide Feedback", color: "var(--proto-feedback)", packet: "💬" },
+
+                            // Deployment
+                            { from: "ci_cd_pipeline", to: "production_environment", protocol: "Deploy Accepted Increment", color: "var(--proto-delivery)", packet: "🖥️" },
+                            { from: "production_environment", to: "end_user", protocol: "New Feature Available", color: "var(--proto-delivery)", packet: "😊" },
+                            { from: "working_increment", to: "project_status_board", protocol: "Update Metrics (Success)", color: "var(--proto-success)", packet: "📈" },
+                            { from: "project_status_board", to: "sprint_retrospective", protocol: "Data for Retrospective", color: "var(--proto-retrospective)", packet: "📊" },
+
+
+                            // Sprint Retrospective
+                            { from: "scrum_master", to: "sprint_retrospective", protocol: "Facilitate Retrospective", color: "var(--proto-ceremony)", packet: "🔄" },
+                            { from: "dev_team", to: "sprint_retrospective", protocol: "What Went Well, Less Well", color: "var(--proto-retrospective)", packet: "💬" },
+                            { from: "qa_tester", to: "sprint_retrospective", protocol: "Actions for Improvement", color: "var(--proto-retrospective)", packet: "💡" },
+                            { from: "sprint_retrospective", to: "jira_azure_devops", protocol: "Update Team Process Improvements", color: "var(--proto-tool)", packet: "⚙️" },
+                        ]
+                    },
+                    agile_progressive_elaboration: {
+                        description: "Scenario 1: Progressive Elaboration of a Feature",
+                        sequence: [
+                            { from: "business_stakeholders", to: "product_vision", protocol: "High-Level Idea: 'Reporting'", color: "var(--proto-vision)", packet: "💡" },
+                            { from: "product_vision", to: "product_owner", protocol: "PO Gathers Initial Details", color: "var(--proto-refinement)", packet: "📝" },
+                            { from: "product_owner", to: "product_backlog", protocol: "Add 'Reporting Module' (Epic)", color: "var(--proto-refinement)", packet: "📋", pbiIncrease: 1, storyPointsChange: 50, projectHealthChange: "Good" },
+                            
+                            { from: "product_owner", to: "dev_team", protocol: "Refinement Session 1 (User Stories)", color: "var(--proto-refinement)", packet: "🤝" },
+                            { from: "dev_team", to: "product_backlog", protocol: "Split Epic into Stories (e.g., 'View Report')", color: "var(--proto-refinement)", packet: "📋", pbiIncrease: 3, storyPointsChange: -20 }, /* Epic removed, stories added */
+                            { from: "product_backlog", to: "product_owner", protocol: "PO Prioritizes Stories", color: "var(--proto-refinement)", packet: "🎯" },
+                            
+                            { from: "product_owner", to: "dev_team", protocol: "Refinement Session 2 (Acceptance Criteria)", color: "var(--proto-refinement)", packet: "🤝" },
+                            { from: "dev_team", to: "jira_azure_devops", protocol: "Detailed AC for 'View Report' Story", color: "var(--proto-tool)", packet: "⚙️", pbiIncrease: 0, sbiIncrease: 0, storyPointsChange: 0 }, // Story Point refinement, not actual change
+                            { from: "jira_azure_devops", to: "sprint_backlog", protocol: "Story 'View Report' Ready for Sprint", color: "var(--proto-planning)", packet: "✅" },
+                        ]
+                    },
+                    agile_scope_creep: {
+                        description: "Scenario 2: Scope Creep in a Sprint",
+                        sequence: [
+                            // Initial Sprint Planning
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint Planning: Committed Stories", color: "var(--proto-planning)", packet: "✅", sbiIncrease: 5, storyPointsChange: 20, currentSprintChange: 1, projectHealthChange: "Good" },
+                            { from: "sprint_backlog", to: "dev_team", protocol: "Team Starts Development", color: "var(--proto-development)", packet: "👨‍💻" },
+
+                            // Mid-Sprint Scope Creep
+                            { from: "business_stakeholders", to: "product_owner", protocol: "Urgent New Request: 'Add Export'", color: "var(--proto-issue)", packet: "❗" },
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Add 'Add Export' to Sprint Backlog (Mid-Sprint)", color: "var(--proto-issue)", packet: "➕", sbiIncrease: 1, storyPointsChange: 5 },
+                            { from: "sprint_backlog", to: "dev_team", protocol: "Dev Team sees new item, no capacity", color: "var(--proto-issue)", packet: "😵" },
+                            { from: "dev_team", to: "scrum_master", protocol: "Report Overload / Blocked Work", color: "var(--proto-issue)", packet: "🛑" },
+
+                            // Scrum Master Intervention
+                            { from: "scrum_master", to: "product_owner", protocol: "Discuss Sprint Integrity / Capacity", color: "var(--proto-mitigation)", packet: "🤝" },
+                            { from: "product_owner", to: "business_stakeholders", protocol: "Negotiate 'Add Export' for Next Sprint", color: "var(--proto-mitigation)", packet: "💬" },
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Remove 'Add Export' from Current Sprint", color: "var(--proto-mitigation)", packet: "➖", sbiDecrease: 1, storyPointsChange: -5, projectHealthChange: "Warning" },
+                            { from: "sprint_backlog", to: "product_backlog", protocol: "Move to Product Backlog (Prioritized)", color: "var(--proto-planning)", packet: "📋", pbiIncrease: 1, storyPointsChange: 5 },
+
+                            // Sprint Completion (with original scope)
+                            { from: "dev_team", to: "working_increment", protocol: "Deliver Original Sprint Scope", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 5, storyPointsChange: 20 },
+                            { from: "working_increment", to: "project_status_board", protocol: "Update Metrics (Recovered)", color: "var(--proto-success)", packet: "📈" },
+                            { from: "project_status_board", to: "project_status_board", protocol: "Project Health: Good (after mitigation)", color: "var(--proto-success)", packet: "📈", projectHealthChange: "Good" }
+
+                        ]
+                    },
+                    agile_budget_overrun: {
+                        description: "Scenario 3: Budget Overrun Due to Unexpected Complexity",
+                        sequence: [
+                            // Initial state
+                            { from: "product_owner", to: "product_backlog", protocol: "Initial Project Backlog (Budgeted)", color: "var(--proto-planning)", packet: "📋", pbiIncrease: 10, storyPointsChange: 100, projectHealthChange: "Good" },
+
+                            // Sprint progresses, unexpected complexity
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint 3 Planning", color: "var(--proto-planning)", packet: "📝", currentSprintChange: 3, sbiIncrease: 4, pbiDecrease: 4, storyPointsChange: 25 },
+                            { from: "dev_team", to: "daily_scrum", protocol: "Daily Sync: 'Unexpected Technical Debt'", color: "var(--proto-issue)", packet: "🗣️" },
+                            { from: "scrum_master", to: "dev_team", protocol: "Investigate Impediment", color: "var(--proto-issue)", packet: "🔎" },
+                            { from: "dev_team", to: "scrum_master", protocol: "Estimated +5 Days to Resolve", color: "var(--proto-issue)", packet: "⏰", totalDaysOverrunChange: 5, projectHealthChange: "Warning" },
+
+                            // Escalation
+                            { from: "scrum_master", to: "product_owner", protocol: "Report Impediment & Cost Implication", color: "var(--proto-overrun)", packet: "💸" },
+                            { from: "product_owner", to: "business_stakeholders", protocol: "Escalate Budget/Timeline Impact", color: "var(--proto-overrun)", packet: "❗" },
+                            
+                            // Decision making
+                            { from: "business_stakeholders", to: "product_owner", protocol: "Option: Reduce Scope or Increase Budget", color: "var(--proto-mitigation)", packet: "🤝" },
+                            { from: "product_owner", to: "product_backlog", protocol: "Decision: De-prioritize 2 Low Value PBIs", color: "var(--proto-mitigation)", packet: "➖", pbiDecrease: 2, storyPointsChange: -15 },
+                            { from: "product_backlog", to: "jira_azure_devops", protocol: "Update Project Backlog", color: "var(--proto-tool)", packet: "⚙️" },
+
+                            // Project continues with adjusted scope
+                            { from: "dev_team", to: "working_increment", protocol: "Deliver Sprint with Reduced Scope", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 4, storyPointsChange: 25 },
+                            { from: "working_increment", to: "project_status_board", protocol: "Project Health: Recovered (Reduced Scope)", color: "var(--proto-success)", packet: "📈", projectHealthChange: "Good" }
+                        ]
+                    },
+                    agile_estimate_miss: {
+                        description: "Scenario 4: Estimate Miss Leading to Sprint Overrun",
+                        sequence: [
+                            // Sprint Planning
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint Planning (Committed Stories)", color: "var(--proto-planning)", packet: "📝", sbiIncrease: 4, storyPointsChange: 25, currentSprintChange: 1, projectHealthChange: "Good" },
+                            { from: "sprint_backlog", to: "dev_team", protocol: "Team Starts Sprint", color: "var(--proto-development)", packet: "👨‍💻" },
+
+                            // Mid-Sprint: Estimate Miss Identified
+                            { from: "dev_team", to: "daily_scrum", protocol: "Daily Sync: 'Story A taking longer'", color: "var(--proto-issue)", packet: "🗣️" },
+                            { from: "scrum_master", to: "dev_team", protocol: "Facilitate Impediment Resolution", color: "var(--proto-mitigation)", packet: "🤝" },
+                            { from: "dev_team", to: "scrum_master", protocol: "Estimate Update: Story A needs +2 days", color: "var(--proto-issue)", packet: "⏰", totalDaysOverrunChange: 2, projectHealthChange: "Warning" },
+
+                            // Sprint Review (Partial Completion)
+                            { from: "scrum_master", to: "sprint_review", protocol: "Organize Sprint Review", color: "var(--proto-ceremony)", packet: "👀" },
+                            { from: "dev_team", to: "sprint_review", protocol: "Demonstrate Completed Stories (3/4)", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 3, storyPointsChange: 20 },
+                            { from: "product_owner", to: "sprint_review", protocol: "Accept 3 Stories, Story A not Done", color: "var(--proto-impairment)", packet: "❌" },
+                            { from: "sprint_backlog", to: "product_backlog", protocol: "Move Unfinished Story A to Product Backlog", color: "var(--proto-planning)", packet: "📋", sbiDecrease: 1, pbiIncrease: 1, storyPointsChange: 5 },
+
+                            // Retrospective
+                            { from: "scrum_master", to: "sprint_retrospective", protocol: "Retrospective: Root Cause Analysis for Miss", color: "var(--proto-retrospective)", packet: "🔄" },
+                            { from: "dev_team", to: "sprint_retrospective", protocol: "Action Item: Improve Estimation Techniques", color: "var(--proto-retrospective)", packet: "💡" },
+                            { from: "project_status_board", to: "project_status_board", protocol: "Project Health: Warning (Learning from Miss)", color: "var(--proto-mitigation)", packet: "📈", projectHealthChange: "Warning" }
+                        ]
+                    },
+                    agile_failed_project: {
+                        description: "Scenario 5: Agile Project Failure (Persistent Impediments)",
+                        sequence: [
+                            // Initial state - seems normal
+                            { from: "product_owner", to: "product_backlog", protocol: "Project Initialized", color: "var(--proto-planning)", packet: "📋", pbiIncrease: 30, storyPointsChange: 300, projectHealthChange: "Good" },
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint 1 Planning", color: "var(--proto-planning)", packet: "📝", currentSprintChange: 1, sbiIncrease: 5, pbiDecrease: 5, storyPointsChange: 25 },
+                            { from: "dev_team", to: "working_increment", protocol: "Sprint 1 Delivered (Partial Value)", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 5, storyPointsChange: 20 }, // 5 points short
+                            { from: "working_increment", to: "project_status_board", protocol: "Project Health: Warning (Minor Misses)", color: "var(--proto-impairment)", packet: "📈", projectHealthChange: "Warning" },
+
+
+                            // Sprint 2 - more issues
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint 2 Planning", color: "var(--proto-planning)", packet: "📝", currentSprintChange: 2, sbiIncrease: 5, pbiDecrease: 5, storyPointsChange: 25 },
+                            { from: "dev_team", to: "scrum_master", protocol: "Report Blockers: 'External Dependency Delay'", color: "var(--proto-issue)", packet: "🛑" },
+                            { from: "scrum_master", to: "business_stakeholders", protocol: "Escalate Unresolved Dependencies", color: "var(--proto-impairment)", packet: "❗" },
+                            { from: "dev_team", to: "working_increment", protocol: "Sprint 2 Delivered (Significant Miss)", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 5, storyPointsChange: 10 }, // 15 points short
+                            { from: "working_increment", to: "project_status_board", protocol: "Project Health: Critical (Major Delays)", color: "var(--proto-impairment)", packet: "📈", projectHealthChange: "Critical" },
+
+                            // Sprint 3 - continued failure
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint 3 Planning (Low Morale)", color: "var(--proto-planning)", packet: "📝", currentSprintChange: 3, sbiIncrease: 3, pbiDecrease: 3, storyPointsChange: 10 }, // Reduced commitment
+                            { from: "dev_team", to: "daily_scrum", protocol: "Daily Sync: 'No Progress on Critical Item'", color: "var(--proto-impairment)", packet: "😵" },
+                            { from: "scrum_master", to: "product_owner", protocol: "Request Emergency Retrospective", color: "var(--proto-impairment)", packet: "🔄" },
+                            { from: "product_owner", to: "business_stakeholders", protocol: "Decision: Project Goals Unattainable", color: "var(--proto-impairment)", packet: "💥" },
+                            { from: "business_stakeholders", to: "project_status_board", protocol: "Project Failed: Terminate Project", color: "var(--proto-impairment)", packet: "❌", projectHealthChange: "Failed" },
+                            { from: "dev_team", to: "jira_azure_devops", protocol: "Archive Project Artifacts", color: "var(--proto-tool)", packet: "🗑️" }
+                        ]
+                    },
+                    agile_completed_project: {
+                        description: "Scenario 6: Successful Agile Project Completion",
+                        sequence: [
+                            // Initial state - smooth sailing
+                            { from: "business_stakeholders", to: "product_vision", protocol: "Clear Product Vision Established", color: "var(--proto-vision)", packet: "🌟" },
+                            { from: "product_vision", to: "product_backlog", protocol: "Well-Groomed Product Backlog", color: "var(--proto-refinement)", packet: "📋", pbiIncrease: 20, storyPointsChange: 200, projectHealthChange: "Good" },
+
+                            // Multiple successful sprints
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint 1 Planning", color: "var(--proto-planning)", packet: "📝", currentSprintChange: 1, sbiIncrease: 5, pbiDecrease: 5, storyPointsChange: 25 },
+                            { from: "dev_team", to: "working_increment", protocol: "Sprint 1 Delivered (Value 25 SP)", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 5, storyPointsChange: 25, totalDeliverablesChange: 1 },
+                            { from: "working_increment", to: "project_status_board", protocol: "Project Health: Good", color: "var(--proto-success)", packet: "📈" },
+
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint 2 Planning", color: "var(--proto-planning)", packet: "📝", currentSprintChange: 2, sbiIncrease: 5, pbiDecrease: 5, storyPointsChange: 25 },
+                            { from: "dev_team", to: "working_increment", protocol: "Sprint 2 Delivered (Value 25 SP)", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 5, storyPointsChange: 25, totalDeliverablesChange: 1 },
+                            { from: "business_stakeholders", to: "sprint_review", protocol: "Stakeholder Approval", color: "var(--proto-feedback)", packet: "👍" },
+
+                            { from: "product_owner", to: "sprint_backlog", protocol: "Sprint 3 Planning (Final Features)", color: "var(--proto-planning)", packet: "📝", currentSprintChange: 3, sbiIncrease: 4, pbiDecrease: 4, storyPointsChange: 20 },
+                            { from: "dev_team", to: "working_increment", protocol: "Sprint 3 Delivered (Value 20 SP)", color: "var(--proto-delivery)", packet: "✨", sbiDecrease: 4, storyPointsChange: 20, totalDeliverablesChange: 1 },
+
+                            // Project Completion
+                            { from: "product_owner", to: "business_stakeholders", protocol: "Final Project Goal Achieved", color: "var(--proto-success)", packet: "🎉" },
+                            { from: "business_stakeholders", to: "project_status_board", protocol: "Project Completed Successfully!", color: "var(--proto-success)", packet: "🏆", projectHealthChange: "Completed" },
+                            { from: "project_status_board", to: "scrum_master", protocol: "Retrospective: Celebrate Success", color: "var(--proto-retrospective)", packet: "🥳" },
+                            { from: "scrum_master", to: "dev_team", protocol: "Team Celebration!", color: "var(--proto-success)", packet: "🎉" }
+                        ]
+                    }
+                },
+                protocolLegend: {
+                    // Core Agile
+                    "Define Vision": { color: "var(--proto-vision)", symbol: "🌟" },
+                    "Vision Alignment": { color: "var(--proto-vision)", symbol: "🎯" },
+                    "Manage Product Backlog": { color: "var(--proto-refinement)", symbol: "📋" },
+                    "Backlog Refinement": { color: "var(--proto-planning)", symbol: "💡" },
+                    "Sprint Planning": { color: "var(--proto-planning)", symbol: "📝" },
+                    "Commitment": { color: "var(--proto-planning)", symbol: "✅" },
+                    "Update Work Items": { color: "var(--proto-development)", symbol: "⚙️" },
+                    "Trigger Build": { color: "var(--proto-development)", symbol: "🚀" },
+                    "Deploy to Test": { color: "var(--proto-testing)", symbol: "🧪" },
+                    "Execute Tests": { color: "var(--proto-testing)", symbol: "🐞" },
+                    "Test Results": { color: "var(--proto-testing)", symbol: "📊" },
+                    "Facilitate Daily Scrum": { color: "var(--proto-ceremony)", symbol: "🗣️" },
+                    "Updates": { color: "var(--proto-ceremony)", symbol: "💬" },
+                    "Facilitate Retrospective": { color: "var(--proto-ceremony)", symbol: "🔄" },
+                    "Organize Sprint Review": { color: "var(--proto-ceremony)", symbol: "👀" },
+                    "Demo Increment": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Sign-off for Prod": { color: "var(--proto-delivery)", symbol: "✅" },
+                    "Deploy to Production": { color: "var(--proto-delivery)", symbol: "🖥️" },
+                    "Deliver Value": { color: "var(--proto-delivery)", symbol: "😊" },
+                    "Feedback": { color: "var(--proto-feedback)", symbol: "💬" },
+                    "Update Metrics": { color: "var(--proto-status)", symbol: "📈" },
+
+                    // Standard Sprint Specific
+                    "Select PBIs for Sprint": { color: "var(--proto-planning)", symbol: "📝" },
+                    "Team Estimates Stories": { color: "var(--proto-planning)", symbol: "💡" },
+                    "Commit to Sprint Backlog": { color: "var(--proto-planning)", symbol: "✅" },
+                    "Update Sprint Board": { color: "var(--proto-tool)", symbol: "⚙️" },
+                    "Daily Sync (Day 1)": { color: "var(--proto-ceremony)", symbol: "🗣️" },
+                    "Start Development (Story 1)": { color: "var(--proto-development)", symbol: "👨‍💻" },
+                    "Code Committed & Build Triggered": { color: "var(--proto-ci-cd)", symbol: "🚀" },
+                    "Deploy to Test Environment": { color: "var(--proto-testing)", symbol: "🧪" },
+                    "Start Testing (Story 1)": { color: "var(--proto-testing)", symbol: "🐞" },
+                    "Test Pass for Story 1": { color: "var(--proto-testing)", symbol: "✅" },
+                    "Start Development (Story 2)": { color: "var(--proto-development)", symbol: "👨‍💻" },
+                    "Start Testing (Story 2)": { color: "var(--proto-testing)", symbol: "🐞" },
+                    "Test Pass for Story 2": { color: "var(--proto-testing)", symbol: "✅" },
+                    "Demonstrate Working Increment": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Share QA Results": { color: "var(--proto-testing)", symbol: "📊" },
+                    "Accept Stories": { color: "var(--proto-success)", symbol: "👍" },
+                    "Provide Feedback": { color: "var(--proto-feedback)", symbol: "💬" },
+                    "Deploy Accepted Increment": { color: "var(--proto-delivery)", symbol: "🖥️" },
+                    "New Feature Available": { color: "var(--proto-delivery)", symbol: "😊" },
+                    "Update Metrics (Success)": { color: "var(--proto-success)", symbol: "📈" },
+                    "Data for Retrospective": { color: "var(--proto-retrospective)", symbol: "📊" },
+                    "What Went Well, Less Well": { color: "var(--proto-retrospective)", symbol: "💬" },
+                    "Actions for Improvement": { color: "var(--proto-retrospective)", symbol: "💡" },
+                    "Update Team Process Improvements": { color: "var(--proto-tool)", symbol: "⚙️" },
+
+                    // Progressive Elaboration
+                    "High-Level Idea: 'Reporting'": { color: "var(--proto-vision)", symbol: "💡" },
+                    "PO Gathers Initial Details": { color: "var(--proto-refinement)", symbol: "📝" },
+                    "Add 'Reporting Module' (Epic)": { color: "var(--proto-refinement)", symbol: "📋" },
+                    "Refinement Session 1 (User Stories)": { color: "var(--proto-refinement)", symbol: "🤝" },
+                    "Split Epic into Stories (e.g., 'View Report')": { color: "var(--proto-refinement)", symbol: "📋" },
+                    "PO Prioritizes Stories": { color: "var(--proto-refinement)", symbol: "🎯" },
+                    "Refinement Session 2 (Acceptance Criteria)": { color: "var(--proto-refinement)", symbol: "🤝" },
+                    "Detailed AC for 'View Report' Story": { color: "var(--proto-tool)", symbol: "⚙️" },
+                    "Story 'View Report' Ready for Sprint": { color: "var(--proto-planning)", symbol: "✅" },
+
+                    // Scope Creep
+                    "Sprint Planning: Committed Stories": { color: "var(--proto-planning)", symbol: "✅" },
+                    "Team Starts Development": { color: "var(--proto-development)", symbol: "👨‍💻" },
+                    "Urgent New Request: 'Add Export'": { color: "var(--proto-issue)", symbol: "❗" },
+                    "Add 'Add Export' to Sprint Backlog (Mid-Sprint)": { color: "var(--proto-issue)", symbol: "➕" },
+                    "Dev Team sees new item, no capacity": { color: "var(--proto-issue)", symbol: "😵" },
+                    "Report Overload / Blocked Work": { color: "var(--proto-issue)", symbol: "🛑" },
+                    "Discuss Sprint Integrity / Capacity": { color: "var(--proto-mitigation)", symbol: "🤝" },
+                    "Negotiate 'Add Export' for Next Sprint": { color: "var(--proto-mitigation)", symbol: "💬" },
+                    "Remove 'Add Export' from Current Sprint": { color: "var(--proto-mitigation)", symbol: "➖" },
+                    "Move to Product Backlog (Prioritized)": { color: "var(--proto-planning)", symbol: "📋" },
+                    "Deliver Original Sprint Scope": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Project Health: Good (after mitigation)": { color: "var(--proto-success)", symbol: "📈" },
+
+                    // Budget Overrun
+                    "Initial Project Backlog (Budgeted)": { color: "var(--proto-planning)", symbol: "📋" },
+                    "Sprint 3 Planning": { color: "var(--proto-planning)", symbol: "📝" },
+                    "Daily Sync: 'Unexpected Technical Debt'": { color: "var(--proto-issue)", symbol: "🗣️" },
+                    "Investigate Impediment": { color: "var(--proto-issue)", symbol: "🔎" },
+                    "Estimated +5 Days to Resolve": { color: "var(--proto-issue)", symbol: "⏰" },
+                    "Report Impediment & Cost Implication": { color: "var(--proto-overrun)", symbol: "💸" },
+                    "Escalate Budget/Timeline Impact": { color: "var(--proto-overrun)", symbol: "❗" },
+                    "Option: Reduce Scope or Increase Budget": { color: "var(--proto-mitigation)", symbol: "🤝" },
+                    "Decision: De-prioritize 2 Low Value PBIs": { color: "var(--proto-mitigation)", symbol: "➖" },
+                    "Update Project Backlog": { color: "var(--proto-tool)", symbol: "⚙️" },
+                    "Deliver Sprint with Reduced Scope": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Project Health: Recovered (Reduced Scope)": { color: "var(--proto-success)", symbol: "📈" },
+
+                    // Estimate Miss
+                    "Sprint Planning (Committed Stories)": { color: "var(--proto-planning)", symbol: "📝" },
+                    "Team Starts Sprint": { color: "var(--proto-development)", symbol: "👨‍💻" },
+                    "Daily Sync: 'Story A taking longer'": { color: "var(--proto-issue)", symbol: "🗣️" },
+                    "Facilitate Impediment Resolution": { color: "var(--proto-mitigation)", symbol: "🤝" },
+                    "Estimate Update: Story A needs +2 days": { color: "var(--proto-issue)", symbol: "⏰" },
+                    "Demonstrate Completed Stories (3/4)": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Accept 3 Stories, Story A not Done": { color: "var(--proto-impairment)", symbol: "❌" },
+                    "Move Unfinished Story A to Product Backlog": { color: "var(--proto-planning)", symbol: "📋" },
+                    "Retrospective: Root Cause Analysis for Miss": { color: "var(--proto-retrospective)", symbol: "🔄" },
+                    "Action Item: Improve Estimation Techniques": { color: "var(--proto-retrospective)", symbol: "💡" },
+                    "Project Health: Warning (Learning from Miss)": { color: "var(--proto-mitigation)", symbol: "📈" },
+
+                    // Failed Project
+                    "Project Initialized": { color: "var(--proto-planning)", symbol: "📋" },
+                    "Sprint 1 Planning": { color: "var(--proto-planning)", symbol: "📝" },
+                    "Sprint 1 Delivered (Partial Value)": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Project Health: Warning (Minor Misses)": { color: "var(--proto-impairment)", symbol: "📈" },
+                    "Sprint 2 Planning": { color: "var(--proto-planning)", symbol: "📝" },
+                    "Report Blockers: 'External Dependency Delay'": { color: "var(--proto-issue)", symbol: "🛑" },
+                    "Escalate Unresolved Dependencies": { color: "var(--proto-impairment)", symbol: "❗" },
+                    "Sprint 2 Delivered (Significant Miss)": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Project Health: Critical (Major Delays)": { color: "var(--proto-impairment)", symbol: "📈" },
+                    "Sprint 3 Planning (Low Morale)": { color: "var(--proto-planning)", symbol: "📝" },
+                    "Daily Sync: 'No Progress on Critical Item'": { color: "var(--proto-impairment)", symbol: "😵" },
+                    "Request Emergency Retrospective": { color: "var(--proto-impairment)", symbol: "🔄" },
+                    "Decision: Project Goals Unattainable": { color: "var(--proto-impairment)", symbol: "💥" },
+                    "Project Failed: Terminate Project": { color: "var(--proto-impairment)", symbol: "❌" },
+                    "Archive Project Artifacts": { color: "var(--proto-tool)", symbol: "🗑️" },
+
+                    // Completed Project
+                    "Clear Product Vision Established": { color: "var(--proto-vision)", symbol: "🌟" },
+                    "Well-Groomed Product Backlog": { color: "var(--proto-refinement)", symbol: "📋" },
+                    "Sprint 1 Delivered (Value 25 SP)": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Sprint 2 Delivered (Value 25 SP)": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Stakeholder Approval": { color: "var(--proto-feedback)", symbol: "👍" },
+                    "Sprint 3 Delivered (Value 20 SP)": { color: "var(--proto-delivery)", symbol: "✨" },
+                    "Final Project Goal Achieved": { color: "var(--proto-success)", symbol: "🎉" },
+                    "Project Completed Successfully!": { color: "var(--proto-success)", symbol: "🏆" },
+                    "Retrospective: Celebrate Success": { color: "var(--proto-retrospective)", symbol: "🥳" },
+                    "Team Celebration!": { color: "var(--proto-success)", symbol: "🎉" },
+                },
+                animationSpeed: 1,
+                packetSize: 20,
+                deviceWidth: 100,
+                deviceHeight: 50,
+                packetDelayAfterArrival: 700,
+                initialSprint: 0,
+                initialProductBacklog: 50,
+                initialSprintBacklog: 0,
+                initialStoryPointsCompleted: 0,
+                initialTotalDaysOverrun: 0,
+                initialTotalDeliverables: 0
+            };
+
+            // --- State Variables ---
+            let isRunning = false;
+            let currentFlowType = null;
+            let currentFlowStepIndex = 0;
+            let activePacket = null;
+            let animationFrameId = null;
+            let packetSendTimeoutId = null;
+            
+            // Stats
+            let currentSprint = config.initialSprint;
+            let productBacklogItems = config.initialProductBacklog;
+            let sprintBacklogItems = config.initialSprintBacklog;
+            let storyPointsCompleted = config.initialStoryPointsCompleted;
+            let projectHealth = "Ready";
+            let totalDaysOverrun = config.initialTotalDaysOverrun;
+            let totalDeliverables = config.initialTotalDeliverables;
+
+            // --- DOM Elements ---
+            const elements = {
+                networkCanvas: document.getElementById('networkCanvas'),
+                legendGrid: document.querySelector('#legend .legend-grid'),
+                packetCount: document.getElementById('packetCount'),
+                protocolBadges: document.getElementById('protocolBadges'),
+                status: document.getElementById('status'),
+                controlButtons: document.querySelectorAll('.btn'),
+                
+                // Stats elements
+                currentSprint: document.getElementById('currentSprint'),
+                productBacklogItems: document.getElementById('productBacklogItems'),
+                sprintBacklogItems: document.getElementById('sprintBacklogItems'),
+                storyPointsCompleted: document.getElementById('storyPointsCompleted'),
+                projectHealth: document.getElementById('projectHealth'),
+                totalDaysOverrun: document.getElementById('totalDaysOverrun'),
+                totalDeliverables: document.getElementById('totalDeliverables')
+            };
+
+            /**
+             * Initializes the network visualization by creating devices and the legend.
+             * @memberof NetworkAnimator
+             */
+            function initializeNetwork() {
+                if (!elements.networkCanvas) return;
+
+                document.querySelectorAll('.device, .connection, .packet').forEach(el => el.remove());
+
+                createDevices();
+                initializeLegend();
+                resetStats();
+                updateStatus('Ready for Agile Simulation!', 'var(--ready-status)');
+            }
+
+            /**
+             * Creates and appends device elements to the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function createDevices() {
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const deviceElement = document.createElement('div');
+                    deviceElement.className = 'device';
+                    deviceElement.id = id;
+                    deviceElement.style.left = `${device.x}px`;
+                    deviceElement.style.top = `${device.y}px`;
+                    deviceElement.style.borderColor = device.color;
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    deviceElement.style.background = `linear-gradient(45deg, ${colorValue || device.color}20, ${colorValue || device.color}40)`;
+
+                    deviceElement.innerHTML = `
+                        <div class="device-icon">${device.symbol}</div>
+                        <div class="device-name">${device.name}</div>
+                    `;
+
+                    elements.networkCanvas.appendChild(deviceElement);
+                });
+            }
+
+            /**
+             * Populates the protocol legend based on the `config.protocolLegend`.
+             * @memberof NetworkAnimator
+             */
+            function initializeLegend() {
+                if (!elements.legendGrid) return;
+
+                elements.legendGrid.innerHTML = '';
+                Object.entries(config.protocolLegend).forEach(([name, protocol]) => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protocol.color.replace('var(', '--').replace(')', '')).trim();
+
+                    item.innerHTML = `
+                        <div class="legend-color" style="background: ${colorValue || protocol.color}"></div>
+                        <span>${protocol.symbol} ${name}</span>
+                    `;
+                    elements.legendGrid.appendChild(item);
+                });
+            }
+
+            /**
+             * Starts the animation for a specific flow type.
+             * @memberof NetworkAnimator
+             * @param {string} flowType - The type of Agile flow to simulate.
+             */
+            function startAnimation(flowType) {
+                stopAnimation(); // Stop any previous animation
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`${flowType}Btn`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+
+                if (flowType === 'full_topology') {
+                    isRunning = false;
+                    currentFlowType = null;
+                    Object.values(config.flows.full_topology.sequence).forEach(conn => createConnection(conn));
+                    updateStatus('FULL AGILE TOPOLOGY (Static View)', 'var(--ready-status)');
+                    resetStats(); // Reset stats but keep static view
+                    updateStatsDisplay();
+                } else {
+                    isRunning = true;
+                    currentFlowType = flowType;
+                    currentFlowStepIndex = 0;
+                    resetStats(); // Reset all stats before starting a new dynamic flow
+                    updateStatus(config.flows[flowType].description.toUpperCase(), 'var(--active-red)'); // Simulation is active!
+                    
+                    config.flows[currentFlowType].sequence.forEach(conn => createConnection(conn));
+
+                    packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    animationFrameId = requestAnimationFrame(animatePackets);
+                }
+            }
+
+            /**
+             * Sends the next packet in the current flow's sequence.
+             * @memberof NetworkAnimator
+             */
+            function sendNextPacketInSequence() {
+                if (!isRunning || !currentFlowType || !config.flows[currentFlowType]) {
+                    return;
+                }
+
+                const flowSequence = config.flows[currentFlowType].sequence;
+
+                if (currentFlowStepIndex < flowSequence.length) {
+                    const connectionStep = flowSequence[currentFlowStepIndex];
+                    createPacket(connectionStep);
+
+                    // Update stats based on connectionStep properties
+                    if (connectionStep.currentSprintChange) {
+                        currentSprint += connectionStep.currentSprintChange;
+                    }
+                    if (connectionStep.pbiIncrease) {
+                        productBacklogItems += connectionStep.pbiIncrease;
+                    }
+                    if (connectionStep.pbiDecrease) {
+                        productBacklogItems = Math.max(0, productBacklogItems - connectionStep.pbiDecrease);
+                    }
+                    if (connectionStep.sbiIncrease) {
+                        sprintBacklogItems += connectionStep.sbiIncrease;
+                    }
+                    if (connectionStep.sbiDecrease) {
+                        sprintBacklogItems = Math.max(0, sprintBacklogItems - connectionStep.sbiDecrease);
+                    }
+                    if (connectionStep.storyPointsChange) {
+                        storyPointsCompleted += connectionStep.storyPointsChange;
+                    }
+                    if (connectionStep.projectHealthChange) {
+                        projectHealth = connectionStep.projectHealthChange;
+                    }
+                    if (connectionStep.totalDaysOverrunChange) {
+                        totalDaysOverrun += connectionStep.totalDaysOverrunChange;
+                    }
+                    if (connectionStep.totalDeliverablesChange) {
+                        totalDeliverables += connectionStep.totalDeliverablesChange;
+                    }
+
+                    updateStatsDisplay();
+                } else {
+                    stopAnimation();
+                    updateStatus('Flow Completed!', 'var(--ready-status)');
+                }
+            }
+
+            /**
+             * Stops all ongoing animations and clears the network canvas.
+             * @memberof NetworkAnimator
+             */
+            function stopAnimation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (packetSendTimeoutId) {
+                    clearTimeout(packetSendTimeoutId);
+                    packetSendTimeoutId = null;
+                }
+
+                document.querySelectorAll('.connection, .packet').forEach(el => el.remove());
+                activePacket = null;
+
+                elements.controlButtons.forEach(btn => btn.classList.remove('active'));
+                resetStats();
+                updateStatsDisplay(); // Ensure stats display is updated to reset values
+            }
+
+            /**
+             * Resets the simulation statistics to their initial state.
+             * @memberof NetworkAnimator
+             */
+            function resetStats() {
+                currentSprint = config.initialSprint;
+                productBacklogItems = config.initialProductBacklog;
+                sprintBacklogItems = config.initialSprintBacklog;
+                storyPointsCompleted = config.initialStoryPointsCompleted;
+                projectHealth = "Ready";
+                totalDaysOverrun = config.initialTotalDaysOverrun;
+                totalDeliverables = config.initialTotalDeliverables;
+                updateStatsDisplay(); // Call to update DOM
+            }
+
+            /**
+             * Updates the displayed statistics on the right sidebar.
+             * @memberof NetworkAnimator
+             */
+            function updateStatsDisplay() {
+                elements.currentSprint.textContent = currentSprint;
+                elements.productBacklogItems.textContent = productBacklogItems;
+                elements.sprintBacklogItems.textContent = sprintBacklogItems;
+                elements.storyPointsCompleted.textContent = storyPointsCompleted;
+                elements.totalDaysOverrun.textContent = totalDaysOverrun;
+                elements.totalDeliverables.textContent = totalDeliverables;
+
+                elements.projectHealth.textContent = projectHealth;
+                let healthColor = 'var(--ready-status)';
+                if (projectHealth === 'Warning') healthColor = 'var(--active-orange)';
+                if (projectHealth === 'Critical' || projectHealth === 'Failed') healthColor = 'var(--stopped-status)';
+                if (projectHealth === 'Completed') healthColor = 'var(--proto-success)';
+                elements.projectHealth.style.color = healthColor;
+
+
+                if (elements.packetCount) {
+                    elements.packetCount.textContent = activePacket ? 1 : 0;
+                }
+
+                if (elements.protocolBadges) {
+                    const uniqueProtocols = new Set();
+                    if (activePacket) {
+                        uniqueProtocols.add(activePacket.connection.protocol);
+                    }
+                    elements.protocolBadges.innerHTML = Array.from(uniqueProtocols).map(protocolName => {
+                        const protoConfig = config.protocolLegend[protocolName];
+                        if (protoConfig) {
+                            const colorValue = getComputedStyle(document.documentElement).getPropertyValue(protoConfig.color.replace('var(', '--').replace(')', '')).trim();
+                            return `<span class="protocol-badge" style="background: ${colorValue || protoConfig.color};">${protoConfig.symbol} ${protocolName}</span>`;
+                        }
+                        return '';
+                    }).join('');
+                }
+            }
+
+
+            /**
+             * Creates a visual connection line between two devices.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object (from, to, protocol, color).
+             */
+            function createConnection(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Missing device for connection: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const fromX = fromDevice.x + config.deviceWidth / 2;
+                const fromY = fromDevice.y + config.deviceHeight / 2;
+                const toX = toDevice.x + config.deviceWidth / 2;
+                const toY = toDevice.y + config.deviceHeight / 2;
+
+                const dx = toX - fromX;
+                const dy = toY - fromY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                const connectionEl = document.createElement('div');
+                connectionEl.className = 'connection';
+                connectionEl.style.left = `${fromX}px`;
+                connectionEl.style.top = `${fromY}px`;
+                connectionEl.style.width = `${length}px`;
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                connectionEl.style.background = colorValue || connection.color;
+                connectionEl.style.transform = `rotate(${angle}deg)`;
+
+                connectionEl.innerHTML = `
+                    <span class="connection-label" style="background: ${colorValue || connection.color}E6;">
+                        ${connection.protocol}
+                    </span>
+                `;
+
+                elements.networkCanvas.appendChild(connectionEl);
+            }
+
+            /**
+             * Creates an animated packet element and sets it as the active packet.
+             * @memberof NetworkAnimator
+             * @param {object} connection - The connection object for the packet's path.
+             */
+            function createPacket(connection) {
+                const fromDevice = config.devices[connection.from];
+                const toDevice = config.devices[connection.to];
+
+                if (!fromDevice || !toDevice) {
+                    console.warn(`Cannot create packet, missing device: ${connection.from} or ${connection.to}`);
+                    return;
+                }
+
+                const packetEl = document.createElement('div');
+                packetEl.className = 'packet';
+                const colorValue = getComputedStyle(document.documentElement).getPropertyValue(connection.color.replace('var(', '--').replace(')', '')).trim();
+                packetEl.style.background = colorValue || connection.color;
+                packetEl.textContent = connection.packet;
+
+                elements.networkCanvas.appendChild(packetEl);
+
+                const offsetX = config.deviceWidth / 2 - config.packetSize / 2;
+                const offsetY = config.deviceHeight / 2 - config.packetSize / 2;
+
+                activePacket = {
+                    connection: connection,
+                    element: packetEl,
+                    progress: 0,
+                    fromPos: { x: fromDevice.x + offsetX, y: fromDevice.y + offsetY },
+                    toPos: { x: toDevice.x + offsetX, y: toDevice.y + offsetY }
+                };
+            }
+
+            /**
+             * The main animation loop for packets, called via requestAnimationFrame.
+             * @memberof NetworkAnimator
+             */
+            function animatePackets() {
+                if (!isRunning) {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    return;
+                }
+
+                if (activePacket) {
+                    activePacket.progress += 0.003 * config.animationSpeed;
+
+                    if (activePacket.progress >= 1) {
+                        activePacket.element.remove();
+                        activePacket = null;
+                        currentFlowStepIndex++;
+                        
+                        packetSendTimeoutId = setTimeout(sendNextPacketInSequence, config.packetDelayAfterArrival);
+                    } else {
+                        const x = activePacket.fromPos.x + (activePacket.toPos.x - activePacket.fromPos.x) * activePacket.progress;
+                        const y = activePacket.fromPos.y + (activePacket.toPos.y - activePacket.fromPos.y) * activePacket.progress;
+
+                        activePacket.element.style.left = `${x}px`;
+                        activePacket.element.style.top = `${y}px`;
+                    }
+                }
+
+                updateStatsDisplay();
+                animationFrameId = requestAnimationFrame(animatePackets);
+            }
+
+            /**
+             * Updates the status message displayed on the page.
+             * @memberof NetworkAnimator
+             * @param {string} message - The status message to display.
+             * @param {string} [color] - Optional, a CSS color string for the status text.
+             */
+            function updateStatus(message, color = 'var(--ready-status)') {
+                if (elements.status) {
+                    elements.status.textContent = message;
+                    elements.status.style.color = color;
+                }
+            }
+
+            /**
+             * Exports the current network configuration and flow steps to a CSV file.
+             * @memberof NetworkAnimator
+             */
+            function exportToCSV() {
+                const csvRows = [];
+                csvRows.push('Type,ID,Name,Symbol/Packet,X,Y,Color,Protocol,From,To,FlowStep,CurrentSprintChange,PBIIncrease,PBIDecrease,SBIIncrease,SBIDecrease,StoryPointsChange,ProjectHealthChange,TotalDaysOverrunChange,TotalDeliverablesChange');
+
+                Object.entries(config.devices).forEach(([id, device]) => {
+                    const colorValue = getComputedStyle(document.documentElement).getPropertyValue(device.color.replace('var(', '--').replace(')', '')).trim();
+                    csvRows.push(`Device,${id},${device.name},${device.symbol},${device.x},${device.y},${colorValue || device.color},,-,,,,,,,,`);
+                });
+
+                Object.entries(config.flows).forEach(([flowId, flow]) => {
+                    if (flowId === 'full_topology') return; 
+
+                    flow.sequence.forEach((conn, index) => {
+                        const colorValue = getComputedStyle(document.documentElement).getPropertyValue(conn.color.replace('var(', '--').replace(')', '')).trim();
+                        csvRows.push(`Flow Step,,${flowId} - Step ${index + 1},${conn.packet},,,,${colorValue || conn.color},${conn.protocol},${conn.from},${conn.to},${index + 1},` +
+                            `${conn.currentSprintChange || ''},${conn.pbiIncrease || ''},${conn.pbiDecrease || ''},${conn.sbiIncrease || ''},${conn.sbiDecrease || ''},${conn.storyPointsChange || ''},` +
+                            `${conn.projectHealthChange || ''},${conn.totalDaysOverrunChange || ''},${conn.totalDeliverablesChange || ''}`);
+                    });
+                });
+
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'agile_project_simulation_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('Agile Project simulation data exported to CSV successfully!');
+            }
+
+            /**
+             * Handles keyboard input for animation controls.
+             * @memberof NetworkAnimator
+             * @param {KeyboardEvent} e - The keyboard event object.
+             */
+            function handleKeyDown(e) {
+                switch(e.key) {
+                    case '1': NetworkAnimator.startAnimation('agile_sprint_flow'); break;
+                    case '2': NetworkAnimator.startAnimation('agile_progressive_elaboration'); break;
+                    case '3': NetworkAnimator.startAnimation('agile_scope_creep'); break;
+                    case '4': NetworkAnimator.startAnimation('agile_budget_overrun'); break;
+                    case '5': NetworkAnimator.startAnimation('agile_estimate_miss'); break;
+                    case '6': NetworkAnimator.startAnimation('agile_failed_project'); break;
+                    case '7': NetworkAnimator.startAnimation('agile_completed_project'); break;
+                    case '8': NetworkAnimator.startAnimation('full_topology'); break;
+                    case ' ': e.preventDefault(); NetworkAnimator.stopAnimation(); break;
+                    case 'e': e.preventDefault(); NetworkAnimator.exportToCSV(); break;
+                }
+            }
+
+            // --- Public API ---
+            return {
+                initialize: initializeNetwork,
+                startAnimation: startAnimation,
+                stopAnimation: stopAnimation,
+                exportToCSV: exportToCSV,
+                handleKeyDown: handleKeyDown
+            };
+
+        })();
+
+        window.addEventListener('load', NetworkAnimator.initialize);
+        document.addEventListener('keydown', NetworkAnimator.handleKeyDown);
+
+    </script>
+</body>
+</html>
